@@ -1,0 +1,17 @@
+{
+  "name": "velt-chat-sdk-adapter-monorepo",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Monorepo for @veltdev/chat-sdk-adapter and its example app",
+  "workspaces": [
+    "packages/*",
+    "examples/*"
+  ],
+  "scripts": {
+    "build": "npm run build -w @veltdev/chat-sdk-adapter",
+    "test": "npm run test -w @veltdev/chat-sdk-adapter",
+    "typecheck": "npm run typecheck -w @veltdev/chat-sdk-adapter"
+  },
+  "license": "Apache-2.0"
+}

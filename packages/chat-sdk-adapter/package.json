@@ -1,0 +1,63 @@
+{
+  "name": "@veltdev/chat-sdk-adapter",
+  "version": "0.1.0",
+  "description": "Chat SDK adapter for Velt comment threads. Build cross-platform AI bots that read and respond in Velt comment threads.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "homepage": "https://velt.dev",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/veltdev/velt-chat-sdk-adapter.git"
+  },
+  "keywords": [
+    "velt",
+    "chat-sdk",
+    "chat-adapter",
+    "comments",
+    "bot",
+    "collaboration"
+  ],
+  "sideEffects": false,
+  "files": [
+    "dist"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit"
+  },
+  "peerDependencies": {
+    "chat": ">=4.0.0"
+  },
+  "dependencies": {
+    "@chat-adapter/shared": "^4.29.0",
+    "hast-util-from-html": "^2.0.3",
+    "hast-util-to-html": "^9.0.5",
+    "hast-util-to-mdast": "^10.1.2",
+    "mdast-util-to-hast": "^13.2.0",
+    "unist-util-visit": "^5.0.0"
+  },
+  "devDependencies": {
+    "@types/hast": "^3.0.4",
+    "@types/mdast": "^4.0.4",
+    "@types/node": "^20.14.0",
+    "chat": "^4.29.0",
+    "tsup": "^8.3.0",
+    "typescript": "^5.5.0",
+    "vitest": "^2.1.0"
+  }
+}

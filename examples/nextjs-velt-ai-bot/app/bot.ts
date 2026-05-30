@@ -1,0 +1,65 @@
+import { Chat, type Thread } from "chat";
+import { toAiMessages } from "chat/ai";
+import { streamText } from "ai";
+import { createMemoryState } from "@chat-adapter/state-memory";
+import { createVeltAdapter, type VeltAdapter } from "@veltdev/chat-sdk-adapter";
+import { BOT_USER_ID, BOT_USER_NAME, resolveUsers } from "./database";
+import { resolveModel } from "./model";
+
+const SYSTEM_PROMPT =
+  "You are a helpful assistant replying inside a Velt comment thread. " +
+  "Keep replies concise, friendly, and in plain prose.";
+
+let chatSingleton: Chat<{ velt: VeltAdapter }> | null = null;
+
+/**
+ * Lazily construct the Chat SDK instance wired to the Velt adapter with an AI
+ * streaming bot. Construction is deferred to the first request so credentials
+ * only need to be present at runtime (`next build` can import this module).
+ */
+export function getChat(): Chat<{ velt: VeltAdapter }> {
+  if (chatSingleton) return chatSingleton;
+
+  const chat = new Chat<{ velt: VeltAdapter }>({
+    userName: BOT_USER_NAME,
+    adapters: {
+      velt: createVeltAdapter({
+        botUserId: BOT_USER_ID,
+        botUserName: BOT_USER_NAME,
+        organizationId: process.env.VELT_ORGANIZATION_ID,
+        resolveUsers,
+      }),
+    },
+    state: createMemoryState(),
+  });
+
+  // Fetch the thread history, ask the LLM, and stream the reply back into the
+  // Velt comment thread. Streaming uses the SDK's post-then-edit fallback since
+  // the Velt adapter has no native streaming API.
+  async function streamReply(thread: Thread): Promise<void> {
+    const history = await thread.adapter.fetchMessages(thread.id, { limit: 20 });
+    const messages = await toAiMessages(history.messages, { includeNames: true });
+    const result = streamText({
+      model: resolveModel(),
+      system: SYSTEM_PROMPT,
+      messages,
+    });
+    await thread.post(result.textStream);
+  }
+
+  // Respond when a user @-mentions the bot in a new thread.
+  chat.onNewMention(async (thread) => {
+    await thread.subscribe();
+    await streamReply(thread);
+  });
+
+  // Keep responding when mentioned again in threads the bot already follows.
+  chat.onSubscribedMessage(async (thread, message) => {
+    if (message.isMention) {
+      await streamReply(thread);
+    }
+  });
+
+  chatSingleton = chat;
+  return chat;
+}
