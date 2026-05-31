@@ -57,4 +57,58 @@ describe("parseVeltWebhook", () => {
     const event = parseVeltWebhook(JSON.stringify({ event: "comment_annotation.assign", data: {} }));
     expect(event.kind).toBe("unknown");
   });
+
+  it("extracts org/doc from the Advanced (v2) NESTED metadata shape", () => {
+    // Real-world Velt Advanced webhook: metadata.organization.organizationId
+    // and metadata.document.documentId (NOT flat).
+    const body = JSON.stringify({
+      event: "comment.add",
+      source: "comment",
+      data: {
+        actionUser: { userId: "user-00ecy7ez", name: "Alex Miller" },
+        commentAnnotation: { annotationId: "NHR5sMWU7YmTv2HJ1nVC", comments: [] },
+        targetComment: {
+          commentId: 903108,
+          commentText: "@Velt Bot yo!",
+          from: { userId: "user-00ecy7ez", name: "Alex Miller" },
+          to: [{ userId: "velt-bot", name: "Velt Bot" }],
+          taggedUserContacts: [{ userId: "velt-bot", text: "@Velt Bot" }],
+        },
+        metadata: {
+          apiKey: "6xTcUFtlYAlCdh11zrKB",
+          organization: { organizationId: "sample-apps-demo-org" },
+          document: { documentId: "doc-tiptap-123", documentName: "Tiptap Editor" },
+        },
+      },
+    });
+    const event = parseVeltWebhook(body);
+    expect(event.kind).toBe("comment.add");
+    expect(event.organizationId).toBe("sample-apps-demo-org");
+    expect(event.documentId).toBe("doc-tiptap-123");
+    expect(event.annotationId).toBe("NHR5sMWU7YmTv2HJ1nVC");
+    expect(event.comment?.commentId).toBe(903108);
+    expect(event.comment?.to?.[0]?.userId).toBe("velt-bot");
+  });
+
+  it("treats comment_annotation.add as a new message (new-thread mention)", () => {
+    const body = JSON.stringify({
+      event: "comment_annotation.add",
+      data: {
+        commentAnnotation: {
+          annotationId: "ann-new",
+          comments: [
+            { commentId: 1, commentText: "@Velt Bot hi", from: { userId: "u1" }, to: [{ userId: "velt-bot" }] },
+          ],
+        },
+        metadata: {
+          organization: { organizationId: "org-1" },
+          document: { documentId: "doc-1" },
+        },
+      },
+    });
+    const event = parseVeltWebhook(body);
+    expect(event.kind).toBe("comment.add");
+    expect(event.documentId).toBe("doc-1");
+    expect(event.comment?.commentId).toBe(1);
+  });
 });

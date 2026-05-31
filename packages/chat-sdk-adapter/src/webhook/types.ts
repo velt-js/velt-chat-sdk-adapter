@@ -33,10 +33,14 @@ export interface VeltWebhookCommentAnnotation {
 
 /** Metadata block carrying document/organization identifiers. */
 export interface VeltWebhookMetadata {
+  // Basic (v1) webhooks carry these flat:
   documentId?: string;
   clientDocumentId?: string;
   organizationId?: string;
   clientOrganizationId?: string;
+  // Advanced (v2) webhooks nest them:
+  organization?: { organizationId?: string };
+  document?: { documentId?: string; documentName?: string };
 }
 
 /** Normalized webhook event produced by {@link parseVeltWebhook}. */

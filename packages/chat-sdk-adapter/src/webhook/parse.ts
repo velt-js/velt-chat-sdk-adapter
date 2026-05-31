@@ -13,6 +13,9 @@ function classify(type: string): VeltWebhookEventKind {
     case "comment.add":
     case "added":
     case "newlyAdded":
+    // A new thread's first comment arrives as comment_annotation.add; treat it
+    // as a new message (its comment is in commentAnnotation.comments).
+    case "comment_annotation.add":
       return "comment.add";
     case "comment.update":
     case "updated":
@@ -63,8 +66,16 @@ export function parseVeltWebhook(body: string): VeltWebhookEvent {
   return {
     kind: classify(rawType ?? ""),
     rawType: rawType ?? "",
-    organizationId: metadata.organizationId ?? metadata.clientOrganizationId,
-    documentId: metadata.documentId ?? metadata.clientDocumentId,
+    // Basic (v1) carries org/doc flat; Advanced (v2) nests them under
+    // metadata.organization / metadata.document.
+    organizationId:
+      metadata.organizationId ??
+      metadata.clientOrganizationId ??
+      metadata.organization?.organizationId,
+    documentId:
+      metadata.documentId ??
+      metadata.clientDocumentId ??
+      metadata.document?.documentId,
     annotationId: annotation.annotationId,
     comment: targetComment,
     actionUser,

@@ -179,6 +179,23 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
   off). The build commands are identical to the ones that pass locally; Railway
   builds the image server-side.
 
+### 8. Embedded the AI bot into the tiptap sample-app demo
+- **Did:** Folded the adapter + AI streaming bot directly into
+  `sample-apps/.../tiptap/tiptap-comments-demo` (a separate pnpm+turbo monorepo,
+  Next 16): added `lib/chat-bot/{bot,model}.ts`, `app/api/webhooks/velt/route.ts`,
+  and a `VeltInitializeBotContact` component that calls
+  `client.getContactElement().updateContactList([bot], { merge: true })` so the
+  bot is @-mentionable. Reuses the demo's own Velt project creds.
+- **Distribution:** the adapter isn't on npm, so the demo consumes it as a
+  **vendored tarball** (`npm pack` → committed `vendor/*.tgz` → `file:` dep).
+  Publishing to npm is the clean long-term fix (also needed for vendor-official
+  tier).
+- **Worked:** demo `next build` is green; type-checks pass. **Key requirement:**
+  the bot must run in the *same Velt project* as the demo (`6xTc…`), not the
+  separate Railway project (`AP3Gyam…`) — webhooks + replies are project-scoped.
+- **Caveat:** `ai`/`@ai-sdk/anthropic` want `zod ^3.25.76`; the monorepo pins
+  `3.25.67` (peer warning only; schema-less `streamText` use is unaffected).
+
 ## Known gaps / risks
 - Webhook payload field names + REST request/response shapes are **inferred from
   Velt docs**, not yet validated against a live Velt instance. The first live

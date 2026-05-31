@@ -28,6 +28,8 @@ export function getChat(): Chat<{ velt: VeltAdapter }> {
         botUserName: BOT_USER_NAME,
         organizationId: process.env.VELT_ORGANIZATION_ID,
         resolveUsers,
+        // Surface adapter diagnostics (signature/parse/dispatch) in server logs.
+        logger: console,
       }),
     },
     state: createMemoryState(),
@@ -37,24 +39,32 @@ export function getChat(): Chat<{ velt: VeltAdapter }> {
   // Velt comment thread. Streaming uses the SDK's post-then-edit fallback since
   // the Velt adapter has no native streaming API.
   async function streamReply(thread: Thread): Promise<void> {
-    const history = await thread.adapter.fetchMessages(thread.id, { limit: 20 });
-    const messages = await toAiMessages(history.messages, { includeNames: true });
-    const result = streamText({
-      model: resolveModel(),
-      system: SYSTEM_PROMPT,
-      messages,
-    });
-    await thread.post(result.textStream);
+    try {
+      console.log(`[bot] replying in thread ${thread.id}`);
+      const history = await thread.adapter.fetchMessages(thread.id, { limit: 20 });
+      const messages = await toAiMessages(history.messages, { includeNames: true });
+      const result = streamText({
+        model: resolveModel(),
+        system: SYSTEM_PROMPT,
+        messages,
+      });
+      await thread.post(result.textStream);
+      console.log(`[bot] reply posted in thread ${thread.id}`);
+    } catch (err) {
+      console.error("[bot] streamReply failed:", err);
+    }
   }
 
   // Respond when a user @-mentions the bot in a new thread.
   chat.onNewMention(async (thread) => {
+    console.log(`[bot] onNewMention thread=${thread.id}`);
     await thread.subscribe();
     await streamReply(thread);
   });
 
   // Keep responding when mentioned again in threads the bot already follows.
   chat.onSubscribedMessage(async (thread, message) => {
+    console.log(`[bot] onSubscribedMessage thread=${thread.id} isMention=${message.isMention}`);
     if (message.isMention) {
       await streamReply(thread);
     }
