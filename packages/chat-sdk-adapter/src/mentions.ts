@@ -39,6 +39,29 @@ export function buildMentionFields(users: VeltUser[]): {
   };
 }
 
+/**
+ * Replace Velt mention tokens (`{{userId}}`, as returned by the REST/history
+ * API) with readable `@Name` text, so the plain text — and any LLM that reads
+ * it — sees "@Velt Bot" rather than the raw token. Falls back to the user id
+ * when no display name is known.
+ */
+export function normalizeMentionTokens(
+  text: string,
+  raw: VeltRawMessage,
+  extraNames?: Record<string, string>,
+): string {
+  if (!text || !text.includes("{{")) return text;
+  const nameById = new Map<string, string>(Object.entries(extraNames ?? {}));
+  for (const t of raw.taggedUserContacts ?? []) {
+    const name = t.contact?.name ?? t.text?.replace(/^@/, "");
+    if (t.userId && name) nameById.set(t.userId, name);
+  }
+  for (const u of raw.to ?? []) {
+    if (u.userId && u.name) nameById.set(u.userId, u.name);
+  }
+  return text.replace(/\{\{([^}]+)\}\}/g, (_match, id: string) => `@${nameById.get(id) ?? id}`);
+}
+
 function escapeRegex(value: string): string {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }

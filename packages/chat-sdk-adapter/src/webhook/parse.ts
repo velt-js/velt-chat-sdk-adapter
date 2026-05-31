@@ -52,8 +52,19 @@ export function parseVeltWebhook(body: string): VeltWebhookEvent {
   const container = isV2 ? asRecord(payload.data) : payload;
 
   const annotation = asRecord(container.commentAnnotation) as unknown as VeltWebhookCommentAnnotation;
+  const annotationRec = asRecord(container.commentAnnotation);
   const metadata = asRecord(container.metadata) as VeltWebhookMetadata;
   const actionUser = container.actionUser as VeltUser | undefined;
+
+  // Document context — generic across any Velt document. The text a comment is
+  // anchored to lives on the annotation (text-editor config or target element);
+  // doc name/url come from metadata (v2) or the annotation's pageInfo.
+  const anchoredText =
+    (asRecord(asRecord(annotationRec.context).textEditorConfig).text as string | undefined) ??
+    (asRecord(annotationRec.targetElement).targetText as string | undefined);
+  const documentName = metadata.document?.documentName ?? metadata.pageInfo?.title;
+  const documentUrl =
+    metadata.pageInfo?.url ?? (asRecord(annotationRec.pageInfo).url as string | undefined);
 
   const targetComment =
     (container.targetComment as VeltWebhookComment | undefined) ??
@@ -76,6 +87,9 @@ export function parseVeltWebhook(body: string): VeltWebhookEvent {
       metadata.documentId ??
       metadata.clientDocumentId ??
       metadata.document?.documentId,
+    documentName,
+    documentUrl,
+    anchoredText,
     annotationId: annotation.annotationId,
     comment: targetComment,
     actionUser,

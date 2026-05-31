@@ -69,6 +69,14 @@ export interface VeltRawMessage {
   organizationId: string;
   documentId: string;
   annotationId: string;
+
+  // --- document context (when available from the webhook) ---
+  /** Human-readable document name. */
+  documentName?: string;
+  /** URL of the page the comment lives on. */
+  documentUrl?: string;
+  /** The text the comment is anchored to. */
+  anchoredText?: string;
 }
 
 /**

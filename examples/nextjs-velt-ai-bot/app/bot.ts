@@ -2,13 +2,34 @@ import { Chat, type Thread, type Message } from "chat";
 import { toAiMessages } from "chat/ai";
 import { streamText } from "ai";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { createVeltAdapter, type VeltAdapter } from "@veltdev/chat-sdk-adapter";
+import { createVeltAdapter, type VeltAdapter, type VeltRawMessage } from "@veltdev/chat-sdk-adapter";
 import { BOT_USER_ID, BOT_USER_NAME, resolveUsers } from "./database";
 import { resolveModel } from "./model";
+import { resolveDocumentContext } from "./document-context";
 
 const SYSTEM_PROMPT =
-  "You are a helpful assistant replying inside a Velt comment thread. " +
-  "Keep replies concise, friendly, and in plain prose.";
+  "You are a helpful AI assistant that participates in comment threads on " +
+  "documents inside any app. You can answer questions, help with writing " +
+  "(drafting, editing, summarizing), brainstorm, explain concepts, and help with " +
+  "code. Be concise and friendly, in plain prose suited to a comment thread. " +
+  "You are given the comment thread and, when available, context about the " +
+  "document (its title/URL and the specific text a comment is anchored to). Use " +
+  "that context to give relevant, grounded answers. If you're asked about the " +
+  "document and don't have enough context, briefly say what you'd need.";
+
+/** Assemble the per-message context block from document info + optional full text. */
+async function buildContextBlock(raw: VeltRawMessage | undefined): Promise<string> {
+  if (!raw) return "";
+  const lines: string[] = [];
+  if (raw.documentName) lines.push(`Document: "${raw.documentName}"`);
+  if (raw.documentUrl) lines.push(`URL: ${raw.documentUrl}`);
+  if (raw.anchoredText) lines.push(`The comment is anchored to this text: "${raw.anchoredText}"`);
+
+  const fullContent = await resolveDocumentContext(raw).catch(() => null);
+  if (fullContent) lines.push(`\nDocument content:\n${fullContent}`);
+
+  return lines.length ? `--- Context ---\n${lines.join("\n")}` : "";
+}
 
 let chatSingleton: Chat<{ velt: VeltAdapter }> | null = null;
 
@@ -48,9 +69,14 @@ export function getChat(): Chat<{ velt: VeltAdapter }> {
       if (messages.length === 0) {
         messages = [{ role: "user", content: message.text }];
       }
+      // Ground the reply in the document context (title/url/anchored text, plus
+      // any full content from resolveDocumentContext).
+      const contextBlock = await buildContextBlock(message.raw as VeltRawMessage | undefined);
+      const system = contextBlock ? `${SYSTEM_PROMPT}\n\n${contextBlock}` : SYSTEM_PROMPT;
+
       const result = streamText({
         model: resolveModel(),
-        system: SYSTEM_PROMPT,
+        system,
         messages,
       });
       await thread.post(result.textStream);

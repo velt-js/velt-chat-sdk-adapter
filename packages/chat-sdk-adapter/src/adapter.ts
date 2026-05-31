@@ -20,7 +20,7 @@ import { VeltRestClient, type VeltCommentInput } from "./client.js";
 import { resolveConfig } from "./config.js";
 import { ADAPTER_NAME, notSupported } from "./errors.js";
 import { VeltFormatConverter } from "./format-converter.js";
-import { isBotMentioned } from "./mentions.js";
+import { isBotMentioned, normalizeMentionTokens } from "./mentions.js";
 import { parseVeltWebhook } from "./webhook/parse.js";
 import { verifyVeltWebhook } from "./webhook/verify.js";
 import type {
@@ -110,7 +110,9 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
 
     const html = raw.commentHtml ?? raw.commentText ?? "";
     const formatted = this.converter.toAst(html);
-    const text = raw.commentText ?? this.converter.extractPlainText(html);
+    const rawText = raw.commentText ?? this.converter.extractPlainText(html);
+    // Convert {{userId}} mention tokens (from the REST/history API) to @Name.
+    const text = normalizeMentionTokens(rawText, raw, { [this.botUserId]: this.userName });
 
     return new Message<VeltRawMessage>({
       id: String(raw.commentId),
@@ -334,6 +336,9 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
             organizationId,
             documentId,
             annotationId,
+            documentName: event.documentName,
+            documentUrl: event.documentUrl,
+            anchoredText: event.anchoredText,
           };
           void this.chat.processMessage(this, threadId, this.parseMessage(raw), options);
         }

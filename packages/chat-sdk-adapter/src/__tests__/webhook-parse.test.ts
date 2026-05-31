@@ -111,4 +111,27 @@ describe("parseVeltWebhook", () => {
     expect(event.documentId).toBe("doc-1");
     expect(event.comment?.commentId).toBe(1);
   });
+
+  it("extracts document context (name, url, anchored text)", () => {
+    const body = JSON.stringify({
+      event: "comment.add",
+      data: {
+        commentAnnotation: {
+          annotationId: "ann-1",
+          comments: [],
+          context: { textEditorConfig: { text: "usz@google.com" } },
+        },
+        targetComment: { commentId: 1, commentText: "hi", from: { userId: "u1" } },
+        metadata: {
+          organization: { organizationId: "org-1" },
+          document: { documentId: "doc-1", documentName: "Tiptap Editor" },
+          pageInfo: { url: "https://example.com/?documentId=doc-1", title: "Editor" },
+        },
+      },
+    });
+    const event = parseVeltWebhook(body);
+    expect(event.documentName).toBe("Tiptap Editor");
+    expect(event.documentUrl).toBe("https://example.com/?documentId=doc-1");
+    expect(event.anchoredText).toBe("usz@google.com");
+  });
 });

@@ -41,6 +41,7 @@ export interface VeltWebhookMetadata {
   // Advanced (v2) webhooks nest them:
   organization?: { organizationId?: string };
   document?: { documentId?: string; documentName?: string };
+  pageInfo?: { url?: string; baseUrl?: string; title?: string };
 }
 
 /** Normalized webhook event produced by {@link parseVeltWebhook}. */
@@ -51,6 +52,12 @@ export interface VeltWebhookEvent {
   organizationId?: string;
   documentId?: string;
   annotationId?: string;
+  /** Human-readable document name, if present. */
+  documentName?: string;
+  /** URL of the page the comment lives on. */
+  documentUrl?: string;
+  /** The text the comment is anchored to (text-editor / target element). */
+  anchoredText?: string;
   /** The comment that triggered the event (for comment.* events). */
   comment?: VeltWebhookComment;
   /** The user who performed the action. */
