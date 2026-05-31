@@ -4,10 +4,16 @@
   "description": "Chat SDK adapter for Velt comment threads. Build cross-platform AI bots that read and respond in Velt comment threads.",
   "type": "module",
   "license": "Apache-2.0",
-  "homepage": "https://velt.dev",
+  "homepage": "https://github.com/velt-js/velt-chat-sdk-adapter#readme",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/veltdev/velt-chat-sdk-adapter.git"
+    "url": "git+https://github.com/velt-js/velt-chat-sdk-adapter.git"
+  },
+  "bugs": {
+    "url": "https://github.com/velt-js/velt-chat-sdk-adapter/issues"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "keywords": [
     "velt",
@@ -19,7 +25,8 @@
   ],
   "sideEffects": false,
   "files": [
-    "dist"
+    "dist",
+    "CHANGELOG.md"
   ],
   "exports": {
     ".": {
@@ -38,10 +45,11 @@
     "dev": "tsup --watch",
     "test": "vitest run",
     "test:watch": "vitest",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
   },
   "peerDependencies": {
-    "chat": ">=4.0.0"
+    "chat": "^4.0.0"
   },
   "dependencies": {
     "@chat-adapter/shared": "^4.29.0",
@@ -56,8 +64,10 @@
     "@types/mdast": "^4.0.4",
     "@types/node": "^20.14.0",
     "chat": "^4.29.0",
+    "eslint": "^9.0.0",
     "tsup": "^8.3.0",
     "typescript": "^5.5.0",
+    "typescript-eslint": "^8.0.0",
     "vitest": "^2.1.0"
   }
 }

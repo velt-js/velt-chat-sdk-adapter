@@ -269,6 +269,23 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 - **Worked:** demo `next build` green; net change is two files. Committed +
   pushed to `velt-js/sample-apps` main (`900e6fc`).
 
+### 13. Aligned repo with Chat SDK / Liveblocks conventions
+- **Did:** Audited against chat-sdk.dev's "building an adapter" guide + Liveblocks'
+  package structure. We already matched the core (src layout, ESM/ES2022, exports,
+  peer `chat`, `@chat-adapter/shared`, tsup/vitest, own `@veltdev` scope, two
+  examples). Closed the polish gaps: added `LICENSE` (Apache-2.0, root + package);
+  `package.json` `publishConfig: { access: public }`, fixed the wrong
+  `repository.url` (`veltdev` → `velt-js`), added `bugs`/`homepage`, aligned the
+  `chat` peer to `^4.0.0`; README **feature-support matrix** + **message-format**
+  section; `eslint.config.mjs` (+ `lint` script); `CHANGELOG.md`.
+- **Non-AI bot:** already present (`examples/nextjs-velt-bot`) — mirrors
+  Liveblocks' "Chat SDK Bot"; the AI one mirrors their "Chat SDK AI Bot". No new
+  example needed.
+- **Worked:** lint clean, build green, 46 tests pass, `npm pack` includes
+  LICENSE/README/CHANGELOG/dist.
+- **Vendor-official tier:** ✅ vendor-org hosting, ✅ docs, ✅ own scope; remaining
+  is process — npm publish, maintenance commitment, public announcement.
+
 ## Known gaps / risks
 - ✅ *Resolved:* webhook/REST shapes were inferred from docs — now **validated
   live** (two real bugs found + fixed: nested v2 metadata, author-filtered

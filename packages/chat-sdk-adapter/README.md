@@ -86,7 +86,36 @@ export async function POST(request: Request) {
 | `onNewMention` | `comment.add` webhook where the bot is tagged |
 | `onReaction` | `comment.reaction_add` / `comment.reaction_delete` webhooks |
 
-Thread ids are encoded as `velt:{organizationId}:{documentId}:{annotationId}`.
+Thread ids are encoded as `velt:{organizationId}:{documentId}:{annotationId}`
+(each segment URL-encoded). `encodeThreadId` / `decodeThreadId` round-trip this,
+and `channelIdFromThreadId` yields `velt:{organizationId}:{documentId}`.
+
+## Feature support
+
+| Capability | Status |
+| --- | --- |
+| `postMessage` / `editMessage` / `deleteMessage` | ✅ |
+| `fetchMessages` / `fetchThread` | ✅ |
+| `renderFormatted` (mdast → Velt HTML) | ✅ |
+| `parseMessage` (with document context + mention normalization) | ✅ |
+| `handleWebhook` (v2 HMAC + v1 token) | ✅ |
+| `onNewMention` / `onSubscribedMessage` / `onReaction` (inbound) | ✅ |
+| `startTyping` | ▫️ no-op (Velt has no bot typing primitive) |
+| `addReaction` / `removeReaction` (writing) | ⚠️ managed throws; self-hosted only (see [Reactions](#reactions)) |
+| `stream` / `scheduleMessage` / `postEphemeral` / `openDM` / modals | ❌ not implemented |
+
+## Message format
+
+Velt's authoritative comment format is **`commentHtml`**, so `VeltFormatConverter`
+maps **Velt HTML ⇄ Chat SDK mdast** (it extends `BaseFormatConverter`):
+
+- inbound: `commentHtml` → mdast (`toAst`), with `{{userId}}` mention tokens
+  normalized to readable `@Name`;
+- outbound: a postable (`string` / `{ markdown }` / `{ ast }` / `{ card }`) →
+  Velt HTML via `renderPostable` / `fromAst`.
+
+Each parsed `Message.raw` also carries lightweight **document context**
+(`documentName`, `documentUrl`, `anchoredText`) so bots can ground replies.
 
 ## Webhooks
 
