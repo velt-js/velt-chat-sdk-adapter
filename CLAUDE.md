@@ -107,7 +107,7 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 | READMEs (root + package + both examples) | ✅ written |
 | Velt docs page | ✅ written + wired into docs.json |
 | Railway deploy config (AI bot) | ✅ Dockerfile + railway.json (image build not run locally — daemon off) |
-| Live validation against real Velt | ❌ not yet — webhook/REST shapes are inferred from docs |
+| Live validation against real Velt | ✅ WORKING — bot replies end-to-end on the tiptap demo (Railway responder, 6xTc project) |
 
 ---
 
@@ -195,6 +195,26 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
   separate Railway project (`AP3Gyam…`) — webhooks + replies are project-scoped.
 - **Caveat:** `ai`/`@ai-sdk/anthropic` want `zod ^3.25.76`; the monorepo pins
   `3.25.67` (peer warning only; schema-less `streamText` use is unaffected).
+
+### 9. Live go-live + two bugs found only against real Velt
+- **Setup:** the standalone Railway bot is the responder for the tiptap demo;
+  both moved onto the demo's Velt project (`6xTc…`, org `sample-apps-demo-org`).
+  Bot user `velt-bot` added to the org; Advanced (v2/Svix) webhook endpoint →
+  the Railway URL with a `whsec_` signing secret.
+- **Bug 1 (`a6f892f`):** Advanced webhook nests ids under
+  `metadata.organization.organizationId` / `metadata.document.documentId`; parser
+  read the flat v1 shape → `documentId` undefined → every event silently dropped
+  (200, no reply). Fixed to read nested-or-flat; also handled
+  `comment_annotation.add` for new-thread mentions.
+- **Bug 2 (`3789e71`):** `fetchMessages` used `comments/get` with
+  `userIds:[botUserId]`, and Velt **filters that endpoint by comment author** →
+  empty thread before the bot posts → empty LLM prompt → `AI_InvalidPromptError`.
+  Fixed to fetch the full thread via `/commentannotations/get` (embeds all
+  comments, no author filter) + a fallback to the triggering message.
+- **Lesson:** both bugs were invisible to unit tests (built from docs); only the
+  live Svix payload + `logger: console` on the bot surfaced them. The adapter now
+  has regression tests from the real payloads (42 passing).
+- **Result:** ✅ bot replies end-to-end ("Hey Alex! 👋 …").
 
 ## Known gaps / risks
 - Webhook payload field names + REST request/response shapes are **inferred from
