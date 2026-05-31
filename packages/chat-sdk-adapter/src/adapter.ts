@@ -175,7 +175,9 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
 
   async fetchMessages(threadId: string, options?: FetchOptions): Promise<FetchResult<VeltRawMessage>> {
     const ctx = this.decodeThreadId(threadId);
-    const raws = await this.client.getComments({ ...ctx, userIds: [this.botUserId] });
+    // Fetch the whole thread (the annotation endpoint embeds all comments, with
+    // no per-author filter — unlike comments/get).
+    const raws = await this.client.getThreadComments(ctx);
     raws.sort((a, b) => toDate(a.createdAt).getTime() - toDate(b.createdAt).getTime());
 
     let selected = raws;

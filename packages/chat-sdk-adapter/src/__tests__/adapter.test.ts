@@ -135,6 +135,41 @@ describe("postMessage", () => {
   });
 });
 
+describe("fetchMessages", () => {
+  it("fetches the whole thread via the annotation endpoint (no author filter)", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          result: {
+            status: "success",
+            data: [
+              {
+                annotationId: "ann-1",
+                comments: [
+                  { commentId: 1, commentText: "hi", from: { userId: "user-1", name: "Alice" }, createdAt: 1 },
+                  { commentId: 2, commentText: "@Velt Bot help", from: { userId: "user-1" }, to: [{ userId: "velt-bot" }], createdAt: 2 },
+                ],
+              },
+            ],
+          },
+        }),
+        { status: 200 },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    const adapter = makeAdapter();
+    const threadId = adapter.encodeThreadId({ organizationId: "org-1", documentId: "doc-1", annotationId: "ann-1" });
+    const result = await adapter.fetchMessages(threadId);
+
+    const [url] = fetchMock.mock.calls[0]!;
+    expect(url).toContain("/v2/commentannotations/get");
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages[0]!.text).toContain("hi");
+    expect(result.messages[1]!.isMention).toBe(true);
+  });
+});
+
 describe("reactions", () => {
   it("throws on the managed backend", async () => {
     const adapter = makeAdapter();

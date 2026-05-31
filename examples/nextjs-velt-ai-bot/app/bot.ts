@@ -1,4 +1,4 @@
-import { Chat, type Thread } from "chat";
+import { Chat, type Thread, type Message } from "chat";
 import { toAiMessages } from "chat/ai";
 import { streamText } from "ai";
 import { createMemoryState } from "@chat-adapter/state-memory";
@@ -38,11 +38,16 @@ export function getChat(): Chat<{ velt: VeltAdapter }> {
   // Fetch the thread history, ask the LLM, and stream the reply back into the
   // Velt comment thread. Streaming uses the SDK's post-then-edit fallback since
   // the Velt adapter has no native streaming API.
-  async function streamReply(thread: Thread): Promise<void> {
+  async function streamReply(thread: Thread, message: Message): Promise<void> {
     try {
       console.log(`[bot] replying in thread ${thread.id}`);
       const history = await thread.adapter.fetchMessages(thread.id, { limit: 20 });
-      const messages = await toAiMessages(history.messages, { includeNames: true });
+      let messages = await toAiMessages(history.messages, { includeNames: true });
+      // Fall back to the triggering message so the prompt is never empty (e.g.
+      // the very first reply, before any history is fetchable).
+      if (messages.length === 0) {
+        messages = [{ role: "user", content: message.text }];
+      }
       const result = streamText({
         model: resolveModel(),
         system: SYSTEM_PROMPT,
@@ -56,17 +61,17 @@ export function getChat(): Chat<{ velt: VeltAdapter }> {
   }
 
   // Respond when a user @-mentions the bot in a new thread.
-  chat.onNewMention(async (thread) => {
+  chat.onNewMention(async (thread, message) => {
     console.log(`[bot] onNewMention thread=${thread.id}`);
     await thread.subscribe();
-    await streamReply(thread);
+    await streamReply(thread, message);
   });
 
   // Keep responding when mentioned again in threads the bot already follows.
   chat.onSubscribedMessage(async (thread, message) => {
     console.log(`[bot] onSubscribedMessage thread=${thread.id} isMention=${message.isMention}`);
     if (message.isMention) {
-      await streamReply(thread);
+      await streamReply(thread, message);
     }
   });
 

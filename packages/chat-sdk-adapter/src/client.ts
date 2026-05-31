@@ -232,6 +232,24 @@ export class VeltRestClient {
     return (list[0] as Record<string, unknown>) ?? undefined;
   }
 
+  /**
+   * Fetch ALL comments in a thread via the annotation endpoint.
+   *
+   * Uses `/v2/commentannotations/get` (which embeds `comments[]`) rather than
+   * `/comments/get`, because the latter's `userIds` parameter filters by comment
+   * author — passing only the bot's id returns an empty thread until the bot has
+   * posted. The annotation endpoint applies no author filter.
+   */
+  async getThreadComments(args: {
+    organizationId: string;
+    documentId: string;
+    annotationId: string;
+  }): Promise<VeltRawMessage[]> {
+    const annotation = await this.getCommentAnnotation(args);
+    const comments = annotation && Array.isArray(annotation.comments) ? annotation.comments : [];
+    return comments.map((c) => this.toRawMessage(c, args));
+  }
+
   /** Normalize a raw Velt comment into a {@link VeltRawMessage}. */
   toRawMessage(
     comment: unknown,
