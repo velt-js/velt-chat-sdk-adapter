@@ -105,8 +105,8 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 
 | Piece | State |
 | --- | --- |
-| npm package | 🔄 renamed to `@veltdev/chat-sdk-adapter` in-repo; **publish pending**. Old `@velt-js/chat-sdk-adapter@0.1.0` published (to be deprecated → redirect) |
-| Adapter package (`velt-js/velt-chat-sdk-adapter`) | ✅ built, type-checks, **46 tests** pass |
+| npm package | ✅ **published** — `@veltdev/chat-sdk-adapter@0.1.0` (public). Old `@velt-js/chat-sdk-adapter` **unpublished/removed** |
+| Adapter package (`velt-js/velt-chat-sdk-adapter`) | ✅ built, type-checks, **70 tests** pass |
 | Greeting bot example | ✅ built, `next build` green |
 | AI bot example | ✅ built + **live on Railway** |
 | READMEs (root + package + both examples) | ✅ written |
@@ -325,10 +325,31 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
   resolved, so the package can live under Velt's canonical SDK scope alongside
   `@veltdev/node`. (#14 had fallen back to `@velt-js` only because `@veltdev`
   package *creation* 404'd at the time.)
-- **Remaining (needs a real TTY per #14's 2FA lesson):** `npm publish`
-  `@veltdev/chat-sdk-adapter@0.1.0`, then `npm deprecate @velt-js/chat-sdk-adapter`
-  pointing to the new package. Also: the open vercel/chat **PR #572** still names
-  `@velt-js` — update its `velt.mdx` install snippet once the new package is live.
+- **Done (this session):** published **`@veltdev/chat-sdk-adapter@0.1.0`** (public,
+  in a real TTY per #14's 2FA lesson); pushed `main` to GitHub (`a30c5e0`); updated
+  **PR #572** (`adapters.json` packageName + re-pinned `readme` SHA to `a30c5e0`,
+  `velt.mdx` install/import snippets) → fork branch `add-velt-adapter`; renamed the
+  **live docs page** in `velt-js/docs` (`ai/chat-sdk-adapter.mdx`, pushed
+  `e3ec2f58`). User then **unpublished** the old `@velt-js/chat-sdk-adapter`
+  (verified gone — registry 404; new package 200).
+- **Gotcha surfaced:** right after a first-ever publish, the npmjs.com **website
+  search index + org package list lag the registry by minutes-to-hours** — the
+  package is installable (`npm install` hits the registry API) well before it shows
+  in the web UI. Don't trust the website search dropdown as proof of (non-)publish.
+
+### 17. Added config + error-mapping tests (46 → 70)
+- **Did:** Added two test files — `config.test.ts` (12: `resolveConfig` env
+  fallbacks, explicit-over-env precedence, empty-string-as-missing, managed vs
+  self-hosted backend, `webhookVersion` default, `ValidationError` on missing
+  creds, + `createVeltAdapter` eager validation) and `errors.test.ts` (12:
+  `mapVeltError` status→class mapping for 401/403/404/429/500, nested
+  `response.status`, `AdapterError` passthrough, `NetworkError` for statusless
+  errors, `retryAfter` preservation, + `notSupported`). CHANGELOG `### Tests` note.
+- **Why:** `config.ts`, `factory.ts`, and `errors.ts` had no dedicated tests —
+  the highest-value coverage gaps.
+- **Worked:** **70 tests** pass, lint + typecheck clean. Tests aren't shipped in
+  the npm tarball (`files` = dist + LICENSE/README/CHANGELOG), so no republish
+  needed. Commits: tests `1fc1fe6`, changelog `138543f` (on `main`).
 
 ---
 
@@ -379,8 +400,9 @@ annotations) and group mentions; reactions need self-hosted.
 - ✅ *Resolved:* webhook/REST shapes were inferred from docs — now **validated
   live** (two real bugs found + fixed: nested v2 metadata, author-filtered
   history), with regression tests from the real payloads.
-- **Not published to npm:** `@veltdev/chat-sdk-adapter` is consumed from source /
-  Railway build. Publishing is the clean path (and needed for vendor-official tier).
+- ✅ *Resolved:* `@veltdev/chat-sdk-adapter@0.1.0` is **published** (public); the
+  old `@velt-js/chat-sdk-adapter` was unpublished. Examples/Railway can now consume
+  it from npm instead of source.
 - **State is non-persistent:** the bot uses `createMemoryState()`; a redeploy/
   restart forgets thread subscriptions + dedup. Swap to `@chat-adapter/state-redis`
   for production.
