@@ -105,14 +105,16 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 
 | Piece | State |
 | --- | --- |
-| Adapter package (`velt-js/velt-chat-sdk-adapter@21f3283`) | ✅ built, type-checks, **46 tests** pass |
+| npm package | ✅ **published** — `@velt-js/chat-sdk-adapter@0.1.0` (public) |
+| Adapter package (`velt-js/velt-chat-sdk-adapter`) | ✅ built, type-checks, **46 tests** pass |
 | Greeting bot example | ✅ built, `next build` green |
 | AI bot example | ✅ built + **live on Railway** |
 | READMEs (root + package + both examples) | ✅ written |
-| Velt docs page | ✅ written + wired into docs.json (separate docs repo) |
+| Velt docs page | ✅ **live** → `velt.dev/docs/ai/chat-sdk-adapter` (under the AI group) |
 | Railway deploy config (AI bot) | ✅ Dockerfile + railway.json |
 | Tiptap demo — bot @-mentionable | ✅ shipped (`velt-js/sample-apps@900e6fc`) |
 | Live validation against real Velt | ✅ **WORKING** — bot replies end-to-end on the tiptap demo |
+| chat-sdk.dev/adapters listing | 🔄 PR open: [vercel/chat#572](https://github.com/vercel/chat/pull/572) (vendor-official) |
 
 ---
 
@@ -285,6 +287,79 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
   LICENSE/README/CHANGELOG/dist.
 - **Vendor-official tier:** ✅ vendor-org hosting, ✅ docs, ✅ own scope; remaining
   is process — npm publish, maintenance commitment, public announcement.
+
+### 14. Renamed scope to `@velt-js` + published to npm
+- **Did:** Renamed `@veltdev/chat-sdk-adapter` → **`@velt-js/chat-sdk-adapter`**
+  across the repo (only that string; `@veltdev/node` left alone), and **published
+  `@velt-js/chat-sdk-adapter@0.1.0`** (public, Apache-2.0).
+- **Why `@velt-js` not `@veltdev`:** the GitHub org and the npm org we administer
+  are `velt-js`; `@veltdev` is the older SDK scope where this account couldn't
+  *create* a new package (publishing there 404'd).
+- **Publish lesson (painful, ~1hr):** the `@velt-js` org enforces 2FA-on-publish,
+  and relaying OTP codes through chat **always timed out / was rejected**. Account
+  was `auth-only`, re-login didn't help. **Root cause:** `npm publish` run from a
+  non-interactive tool can't do npm's browser-based 2FA, so it falls back to
+  demanding `--otp` and errors `EOTP`. **Fix:** run `npm publish` in a **real
+  terminal** — npm prompts "Press ENTER to open browser," you approve, done. The
+  user's normal "just login and it pushes" works because their terminal is a TTY.
+
+### 15. chat-sdk.dev/adapters listing + docs page move
+- **Did:** The directory is curated in `vercel/chat` (`apps/docs`); vendor
+  adapters are added by **PR** (Liveblocks #321, Resend, AgentPhone #562, Lark
+  #517). Prepared the 3-file change — `adapters.json` entry,
+  `content/adapters/vendor-official/velt.mdx` (mirrors the Liveblocks entry,
+  accurate `features:` map), `meta.json` slug — forked `vercel/chat`, and **opened
+  [PR #572](https://github.com/vercel/chat/pull/572)**.
+- **Docs:** wrote the page in `velt-js/docs`, then **moved it under the AI nav
+  group and renamed it "Chat SDK Adapter"** → live at
+  `velt.dev/docs/ai/chat-sdk-adapter`. Submission drafts kept in `listing/`.
+- **Vendor-official:** org hosting ✅, npm ✅, docs ✅, directory PR open 🔄; only a
+  public announcement remains (draft in `listing/outreach.md`).
+
+---
+
+## Velt vs Liveblocks — bot/adapter feature comparison
+
+Honest side-by-side (from our `features:` map and the Liveblocks directory entry).
+Split into **platform limitations** (genuinely can't) vs **not-yet-implemented**
+(could add).
+
+### Liveblocks does, we don't
+- **Add/remove reactions (managed)** — *the one true gap.* Liveblocks bots react
+  with emoji; Velt has **no managed REST endpoint to write reactions as a user**,
+  so `addReaction`/`removeReaction` work **only with a self-hosted Velt backend**.
+- **Could add (just unimplemented):** `postChannelMessage` (create a new
+  annotation on a doc), `listThreads` (list a doc's annotations),
+  `fetchChannelMessages`, `fetchChannelInfo`, `fetchSingleMessage`.
+- **Attachments / file uploads** — Liveblocks yes; we skip files.
+- **Group mentions** — Liveblocks resolves users *and* groups; we do users only.
+- **Richer AI reference** — Liveblocks has a tool-calling agent guide (AI SDK
+  `ToolLoopAgent` + Redis locking); ours is a simpler streaming-reply example with
+  memory state (tool path wired but off).
+
+### We do, Liveblocks doesn't
+- **Anchored document context (standout)** — every message carries `documentName`,
+  `documentUrl`, and **`anchoredText`** (the exact text/element the comment is
+  pinned to), so the AI bot can answer about the content a comment points at.
+  Liveblocks comments are room threads — no anchored-element concept.
+- **Two webhook auth systems** — we verify Velt **Advanced (Svix HMAC)** *and*
+  **Basic (`Authorization: Basic`)**; works across plans. Liveblocks has one.
+- **Breadth of comment surfaces** — Velt comments live on documents, rich-text
+  editors (Tiptap/SlateJS/Lexical/Quill/Plate/CodeMirror), canvases, video
+  players, charts — the same bot operates across all of them. Liveblocks Comments
+  are room threads.
+- **Mention-token normalization** — `{{userId}}` → `@Name` before the model sees
+  it; plus a pluggable full-document context hook in the example.
+
+### Net
+On **raw Adapter-contract coverage, Liveblocks is ahead** (managed reactions,
+attachments, group mentions, more channel-level methods). We **match on the core**
+(post/edit/delete, fetch thread + messages, webhooks, mentions, AI streaming) and
+**lead on document-grounded context, webhook-system breadth, and surface range**.
+Highest-impact gap-closers: `postChannelMessage` + `listThreads` (easy → Velt
+annotations) and group mentions; reactions need self-hosted.
+
+---
 
 ## Known gaps / risks
 - ✅ *Resolved:* webhook/REST shapes were inferred from docs — now **validated
