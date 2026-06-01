@@ -95,7 +95,7 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 │   └── nextjs-velt-ai-bot/            ← AI streaming bot (BUILT + LIVE on Railway)
 │       └── app/{bot,model,document-context}.ts
 ├── Dockerfile + railway.json          ← deploys nextjs-velt-ai-bot to Railway
-└── (Velt docs page → separate docs repo: integrations/chat-sdk-bot.mdx)
+└── (Velt docs page → separate docs repo: ai/chat-sdk-adapter.mdx)
     (tiptap demo integration → separate sample-apps repo)
 ```
 
