@@ -10,6 +10,15 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Renamed npm scope `@velt-js/chat-sdk-adapter` → `@veltdev/chat-sdk-adapter`.
   The old package is deprecated and redirects here.
 
+### Tests
+- Added 24 tests (46 → 70): `config.test.ts` covers `resolveConfig` env
+  fallbacks, explicit-over-env precedence, empty-string-as-missing, managed vs
+  self-hosted backend, `webhookVersion` default, and `ValidationError` on missing
+  credentials, plus `createVeltAdapter` eager validation; `errors.test.ts` covers
+  `mapVeltError` status→class mapping (401/403/404/429/500), nested
+  `response.status`, `AdapterError` passthrough, `NetworkError` for statusless
+  errors, and `retryAfter` preservation, plus `notSupported`.
+
 ## [0.1.0]
 
 Initial release.
