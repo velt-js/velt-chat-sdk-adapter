@@ -2,7 +2,7 @@
 
 An AI-powered [Chat SDK](https://chat-sdk.dev) bot on [Velt](https://velt.dev)
 comment threads, using
-[`@velt-js/chat-sdk-adapter`](../../packages/chat-sdk-adapter). When a user
+[`@veltdev/chat-sdk-adapter`](../../packages/chat-sdk-adapter). When a user
 @-mentions the bot, it reads the thread history, asks an LLM, and **streams** the
 reply back into the thread.
 

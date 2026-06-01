@@ -1,5 +1,5 @@
 {
-  "name": "@velt-js/chat-sdk-adapter",
+  "name": "@veltdev/chat-sdk-adapter",
   "version": "0.1.0",
   "description": "Chat SDK adapter for Velt comment threads. Build cross-platform AI bots that read and respond in Velt comment threads.",
   "type": "module",

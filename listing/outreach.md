@@ -14,14 +14,14 @@ notifications). We built an official Chat SDK adapter so bots can read and respo
 in **Velt comment threads**, and we'd love to be listed under **Vendor official** in
 the [adapter directory](https://chat-sdk.dev/adapters).
 
-**`@velt-js/chat-sdk-adapter`** — https://github.com/velt-js/velt-chat-sdk-adapter
+**`@veltdev/chat-sdk-adapter`** — https://github.com/velt-js/velt-chat-sdk-adapter
 
 - Implements the `Adapter` contract: `postMessage`/`editMessage`/`deleteMessage`,
   `fetchMessages`/`fetchThread`, `renderFormatted` (Velt HTML ⇄ mdast),
   `handleWebhook` (Velt's Advanced **v2/Svix HMAC** and Basic **v1** systems),
   plus `onNewMention` / `onSubscribedMessage` / `onReaction`.
 - Published under our own scope (not the reserved `@chat-adapter/`):
-  `npm i @velt-js/chat-sdk-adapter`.
+  `npm i @veltdev/chat-sdk-adapter`.
 - Two examples mirroring yours — a greeting bot and a streaming **Claude** AI bot —
   plus a Railway `Dockerfile`. 46 unit tests.
 - **Validated live end-to-end** on our tiptap comments demo (mention → reply).

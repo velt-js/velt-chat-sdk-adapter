@@ -1,4 +1,4 @@
-import type { VeltRawMessage } from "@velt-js/chat-sdk-adapter";
+import type { VeltRawMessage } from "@veltdev/chat-sdk-adapter";
 
 export type DocumentRef = Pick<
   VeltRawMessage,

@@ -12,7 +12,7 @@ A Velt listing is a **3-file change**:
   "type": "platform",
   "community": true,
   "description": "Velt Comments adapter for building bots that read and respond in Velt comment threads on documents, text editors, and canvases.",
-  "packageName": "@velt-js/chat-sdk-adapter",
+  "packageName": "@veltdev/chat-sdk-adapter",
   "author": "Velt",
   "readme": "https://github.com/velt-js/velt-chat-sdk-adapter/tree/289309231ac784a406073b043ea82882552faa05/packages/chat-sdk-adapter",
   "vendorOfficial": true
@@ -37,7 +37,7 @@ Vercel team reviews and merges. Optionally also use the repo's **Adapter Request
 issue template, or post in GitHub Discussions (see `outreach.md`).
 
 ## Prerequisites before submitting
-- ✅ `@velt-js/chat-sdk-adapter` published to npm (done).
+- ✅ `@veltdev/chat-sdk-adapter` published to npm (done).
 - ⬜ The docs link in `velt.mdx` (`https://velt.dev/docs/ai/chat-sdk-adapter`)
   must resolve — commit + deploy that page in the Velt docs repo first.
 - Re-pin the `readme` SHA in the `adapters.json` entry if `main` advances.

@@ -13,8 +13,8 @@ PR — the fields below map to what each adapter card + page shows.
 | Slug | `velt` (page at `/adapters/vendor/velt`) |
 | Tier | Vendor official |
 | Status | Beta |
-| Package | `@velt-js/chat-sdk-adapter` |
-| Install | `npm i @velt-js/chat-sdk-adapter chat` |
+| Package | `@veltdev/chat-sdk-adapter` |
+| Install | `npm i @veltdev/chat-sdk-adapter chat` |
 | Repository | https://github.com/velt-js/velt-chat-sdk-adapter |
 | Documentation | https://velt.dev/docs/ai/chat-sdk-adapter |
 | Maintainer | Velt (`velt-js` org) |
@@ -29,7 +29,7 @@ PR — the fields below map to what each adapter card + page shows.
 ## Adapter page body (draft)
 
 **Velt** is a collaboration SDK (comments, presence, notifications, and more).
-`@velt-js/chat-sdk-adapter` connects a Chat SDK bot to Velt comment threads, so the
+`@veltdev/chat-sdk-adapter` connects a Chat SDK bot to Velt comment threads, so the
 same bot logic runs on Velt alongside Slack, Discord, and every other adapter.
 
 **Mapping:** Organization → Document (channel) → Comment Annotation (thread) →
@@ -46,7 +46,7 @@ reaction-write API). No streaming/scheduling/DM/modals.
 ```ts
 import { Chat } from "chat";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { createVeltAdapter, type VeltAdapter } from "@velt-js/chat-sdk-adapter";
+import { createVeltAdapter, type VeltAdapter } from "@veltdev/chat-sdk-adapter";
 
 const chat = new Chat<{ velt: VeltAdapter }>({
   userName: "Velt Bot",

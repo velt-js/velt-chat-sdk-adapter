@@ -1,4 +1,4 @@
-# @velt-js/chat-sdk-adapter
+# @veltdev/chat-sdk-adapter
 
 Build cross-platform bots that read and respond in **[Velt](https://velt.dev)
 comment threads** using the **[Chat SDK](https://chat-sdk.dev)**.
@@ -11,7 +11,7 @@ stays the same across Velt, Slack, Discord, and every other Chat SDK adapter.
 ## Install
 
 ```bash
-npm install @velt-js/chat-sdk-adapter chat @chat-adapter/state-memory
+npm install @veltdev/chat-sdk-adapter chat @chat-adapter/state-memory
 ```
 
 `chat` is a peer dependency.
@@ -21,7 +21,7 @@ npm install @velt-js/chat-sdk-adapter chat @chat-adapter/state-memory
 ```ts
 import { Chat } from "chat";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { createVeltAdapter, type VeltAdapter } from "@velt-js/chat-sdk-adapter";
+import { createVeltAdapter, type VeltAdapter } from "@veltdev/chat-sdk-adapter";
 
 const chat = new Chat<{ velt: VeltAdapter }>({
   userName: "Velt Bot",

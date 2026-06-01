@@ -24,7 +24,7 @@ A **bridge** that lets a "bot" live inside **Velt comment threads** using the
 the bridge translates that into Velt's API. This mirrors what our competitor
 **Liveblocks** shipped (`@liveblocks/chat-sdk-adapter`).
 
-- The **adapter** (`@velt-js/chat-sdk-adapter`) = the plumbing. It never changes
+- The **adapter** (`@veltdev/chat-sdk-adapter`) = the plumbing. It never changes
   per-bot.
 - The **bot** = a few event handlers on top. We have two flavors: a simple
   **greeting bot** and an **AI bot** that streams Claude replies. The AI bot is
@@ -48,7 +48,7 @@ the bridge translates that into Velt's API. This mirrors what our competitor
                                   │
                                   ▼
   ┌───────────────────────────────────────────────────────────────────┐
-  │  @velt-js/chat-sdk-adapter  →  VeltAdapter.handleWebhook()         │
+  │  @veltdev/chat-sdk-adapter  →  VeltAdapter.handleWebhook()         │
   │   1. verify signature (V2 HMAC / V1 token)                         │
   │   2. parse payload  →  normalized event                           │
   │   3. hand to the Chat SDK (processMessage / processReaction)      │
@@ -81,7 +81,7 @@ the bridge translates that into Velt's API. This mirrors what our competitor
 ```
 velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 ├── CLAUDE.md                          ← this file
-├── packages/chat-sdk-adapter/         ← @velt-js/chat-sdk-adapter (the bridge)
+├── packages/chat-sdk-adapter/         ← @veltdev/chat-sdk-adapter (the bridge)
 │   └── src/
 │       ├── adapter.ts                 the VeltAdapter class (the core)
 │       ├── client.ts                  talks to Velt REST API (fetch)
@@ -105,7 +105,7 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 
 | Piece | State |
 | --- | --- |
-| npm package | ✅ **published** — `@velt-js/chat-sdk-adapter@0.1.0` (public) |
+| npm package | 🔄 renamed to `@veltdev/chat-sdk-adapter` in-repo; **publish pending**. Old `@velt-js/chat-sdk-adapter@0.1.0` published (to be deprecated → redirect) |
 | Adapter package (`velt-js/velt-chat-sdk-adapter`) | ✅ built, type-checks, **46 tests** pass |
 | Greeting bot example | ✅ built, `next build` green |
 | AI bot example | ✅ built + **live on Railway** |
@@ -289,9 +289,9 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
   is process — npm publish, maintenance commitment, public announcement.
 
 ### 14. Renamed scope to `@velt-js` + published to npm
-- **Did:** Renamed `@veltdev/chat-sdk-adapter` → **`@velt-js/chat-sdk-adapter`**
+- **Did:** Renamed `@veltdev/chat-sdk-adapter` → **`@veltdev/chat-sdk-adapter`**
   across the repo (only that string; `@veltdev/node` left alone), and **published
-  `@velt-js/chat-sdk-adapter@0.1.0`** (public, Apache-2.0).
+  `@veltdev/chat-sdk-adapter@0.1.0`** (public, Apache-2.0).
 - **Why `@velt-js` not `@veltdev`:** the GitHub org and the npm org we administer
   are `velt-js`; `@veltdev` is the older SDK scope where this account couldn't
   *create* a new package (publishing there 404'd).
@@ -315,6 +315,20 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
   `velt.dev/docs/ai/chat-sdk-adapter`. Submission drafts kept in `listing/`.
 - **Vendor-official:** org hosting ✅, npm ✅, docs ✅, directory PR open 🔄; only a
   public announcement remains (draft in `listing/outreach.md`).
+
+### 16. Reverse-renamed scope `@velt-js` → `@veltdev`
+- **Did:** Renamed `@velt-js/chat-sdk-adapter` → **`@veltdev/chat-sdk-adapter`**
+  across all 22 referencing files (exact-string replace; `@veltdev/node` and the
+  `velt-js` *GitHub* org URLs left untouched), regenerated `package-lock.json`,
+  added a CHANGELOG "Unreleased → Changed" note. Build green, 46 tests pass.
+- **Why (reversal of #14):** publish access under the `@veltdev` scope is now
+  resolved, so the package can live under Velt's canonical SDK scope alongside
+  `@veltdev/node`. (#14 had fallen back to `@velt-js` only because `@veltdev`
+  package *creation* 404'd at the time.)
+- **Remaining (needs a real TTY per #14's 2FA lesson):** `npm publish`
+  `@veltdev/chat-sdk-adapter@0.1.0`, then `npm deprecate @velt-js/chat-sdk-adapter`
+  pointing to the new package. Also: the open vercel/chat **PR #572** still names
+  `@velt-js` — update its `velt.mdx` install snippet once the new package is live.
 
 ---
 
@@ -365,7 +379,7 @@ annotations) and group mentions; reactions need self-hosted.
 - ✅ *Resolved:* webhook/REST shapes were inferred from docs — now **validated
   live** (two real bugs found + fixed: nested v2 metadata, author-filtered
   history), with regression tests from the real payloads.
-- **Not published to npm:** `@velt-js/chat-sdk-adapter` is consumed from source /
+- **Not published to npm:** `@veltdev/chat-sdk-adapter` is consumed from source /
   Railway build. Publishing is the clean path (and needed for vendor-official tier).
 - **State is non-persistent:** the bot uses `createMemoryState()`; a redeploy/
   restart forgets thread subscriptions + dedup. Swap to `@chat-adapter/state-redis`
