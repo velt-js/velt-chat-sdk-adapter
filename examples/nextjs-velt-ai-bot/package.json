@@ -13,7 +13,7 @@
     "@ai-sdk/anthropic": "^3.0.0",
     "@ai-sdk/openai": "^3.0.0",
     "@chat-adapter/state-memory": "^4.29.0",
-    "@veltdev/chat-sdk-adapter": "*",
+    "@velt-js/chat-sdk-adapter": "*",
     "ai": "^6.0.0",
     "chat": "^4.29.0",
     "next": "^15.0.0",

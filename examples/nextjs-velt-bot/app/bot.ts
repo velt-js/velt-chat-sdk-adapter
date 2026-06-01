@@ -1,6 +1,6 @@
 import { Chat } from "chat";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { createVeltAdapter, type VeltAdapter } from "@veltdev/chat-sdk-adapter";
+import { createVeltAdapter, type VeltAdapter } from "@velt-js/chat-sdk-adapter";
 import { BOT_USER_ID, BOT_USER_NAME, resolveUsers } from "./database";
 
 let chatSingleton: Chat<{ velt: VeltAdapter }> | null = null;

@@ -8,7 +8,7 @@ This is a monorepo:
 
 | Package | Description |
 | --- | --- |
-| [`packages/chat-sdk-adapter`](./packages/chat-sdk-adapter) | The publishable `@veltdev/chat-sdk-adapter` package. |
+| [`packages/chat-sdk-adapter`](./packages/chat-sdk-adapter) | The publishable `@velt-js/chat-sdk-adapter` package. |
 | [`examples/nextjs-velt-bot`](./examples/nextjs-velt-bot) | A runnable Next.js example bot. |
 
 ## Quick start

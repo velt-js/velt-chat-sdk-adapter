@@ -2,7 +2,7 @@
 
 A runnable example of a [Chat SDK](https://chat-sdk.dev) bot running on
 [Velt](https://velt.dev) comment threads, using
-[`@veltdev/chat-sdk-adapter`](../../packages/chat-sdk-adapter).
+[`@velt-js/chat-sdk-adapter`](../../packages/chat-sdk-adapter).
 
 ## Setup
 

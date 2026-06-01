@@ -2,7 +2,7 @@ import { Chat, type Thread, type Message } from "chat";
 import { toAiMessages } from "chat/ai";
 import { streamText } from "ai";
 import { createMemoryState } from "@chat-adapter/state-memory";
-import { createVeltAdapter, type VeltAdapter, type VeltRawMessage } from "@veltdev/chat-sdk-adapter";
+import { createVeltAdapter, type VeltAdapter, type VeltRawMessage } from "@velt-js/chat-sdk-adapter";
 import { BOT_USER_ID, BOT_USER_NAME, resolveUsers } from "./database";
 import { resolveModel } from "./model";
 import { resolveDocumentContext } from "./document-context";

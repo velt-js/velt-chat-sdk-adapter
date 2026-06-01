@@ -13,7 +13,7 @@ import type { VeltAdapterConfig } from "./types.js";
  * @example
  * ```ts
  * import { Chat } from "chat";
- * import { createVeltAdapter } from "@veltdev/chat-sdk-adapter";
+ * import { createVeltAdapter } from "@velt-js/chat-sdk-adapter";
  * import { createMemoryState } from "@chat-adapter/state-memory";
  *
  * const chat = new Chat({

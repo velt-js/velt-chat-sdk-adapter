@@ -24,7 +24,7 @@ A **bridge** that lets a "bot" live inside **Velt comment threads** using the
 the bridge translates that into Velt's API. This mirrors what our competitor
 **Liveblocks** shipped (`@liveblocks/chat-sdk-adapter`).
 
-- The **adapter** (`@veltdev/chat-sdk-adapter`) = the plumbing. It never changes
+- The **adapter** (`@velt-js/chat-sdk-adapter`) = the plumbing. It never changes
   per-bot.
 - The **bot** = a few event handlers on top. We have two flavors: a simple
   **greeting bot** and an **AI bot** that streams Claude replies. The AI bot is
@@ -48,7 +48,7 @@ the bridge translates that into Velt's API. This mirrors what our competitor
                                   │
                                   ▼
   ┌───────────────────────────────────────────────────────────────────┐
-  │  @veltdev/chat-sdk-adapter  →  VeltAdapter.handleWebhook()         │
+  │  @velt-js/chat-sdk-adapter  →  VeltAdapter.handleWebhook()         │
   │   1. verify signature (V2 HMAC / V1 token)                         │
   │   2. parse payload  →  normalized event                           │
   │   3. hand to the Chat SDK (processMessage / processReaction)      │
@@ -81,7 +81,7 @@ the bridge translates that into Velt's API. This mirrors what our competitor
 ```
 velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 ├── CLAUDE.md                          ← this file
-├── packages/chat-sdk-adapter/         ← @veltdev/chat-sdk-adapter (the bridge)
+├── packages/chat-sdk-adapter/         ← @velt-js/chat-sdk-adapter (the bridge)
 │   └── src/
 │       ├── adapter.ts                 the VeltAdapter class (the core)
 │       ├── client.ts                  talks to Velt REST API (fetch)
@@ -290,7 +290,7 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 - ✅ *Resolved:* webhook/REST shapes were inferred from docs — now **validated
   live** (two real bugs found + fixed: nested v2 metadata, author-filtered
   history), with regression tests from the real payloads.
-- **Not published to npm:** `@veltdev/chat-sdk-adapter` is consumed from source /
+- **Not published to npm:** `@velt-js/chat-sdk-adapter` is consumed from source /
   Railway build. Publishing is the clean path (and needed for vendor-official tier).
 - **State is non-persistent:** the bot uses `createMemoryState()`; a redeploy/
   restart forgets thread subscriptions + dedup. Swap to `@chat-adapter/state-redis`
