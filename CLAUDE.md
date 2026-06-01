@@ -107,8 +107,8 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 | --- | --- |
 | npm package | ✅ **published** — `@veltdev/chat-sdk-adapter@0.1.0` (public). Old `@velt-js/chat-sdk-adapter` **unpublished/removed** |
 | Adapter package (`velt-js/velt-chat-sdk-adapter`) | ✅ built, type-checks, **70 tests** pass |
-| Greeting bot example | ✅ built, `next build` green |
-| AI bot example | ✅ built + **live on Railway** |
+| Greeting bot example | ✅ built; **runs clean** (home 200, webhook 401 unsigned / 200 signed) |
+| AI bot example | ✅ built + **live on Railway**; **runs clean** locally (home 200, webhook 401 unsigned) |
 | READMEs (root + package + both examples) | ✅ written |
 | Velt docs page | ✅ **live** → `velt.dev/docs/ai/chat-sdk-adapter` (under the AI group) |
 | Railway deploy config (AI bot) | ✅ Dockerfile + railway.json |
@@ -350,6 +350,23 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
 - **Worked:** **70 tests** pass, lint + typecheck clean. Tests aren't shipped in
   the npm tarball (`files` = dist + LICENSE/README/CHANGELOG), so no republish
   needed. Commits: tests `1fc1fe6`, changelog `138543f` (on `main`).
+
+### 18. Examples consume `@veltdev` from npm + verified runnable
+- **Did:** Switched both examples' dependency from the workspace wildcard
+  `"@veltdev/chat-sdk-adapter": "*"` → published range `"^0.1.0"` (commit
+  `3c06abc`); in the monorepo npm still symlinks `packages/chat-sdk-adapter`
+  (0.1.0 satisfies ^0.1.0), so local dev is unaffected. Then **ran both apps**
+  (`next dev`) and drove them, not just built them.
+- **Verified (with dummy `VELT_*` creds in a gitignored `.env.local`):** greeting
+  bot (:3001) — home `200` (`<h1>Velt Chat SDK Bot</h1>`), webhook `401` on an
+  unsigned body and `200` on a correctly HMAC-signed v2 body (verify → parse →
+  dispatch); logs showed `Chat instance initialized { adapters: ['velt'] }`. AI
+  bot (:3002) — home `200`, webhook `401` unsigned. Both typecheck clean.
+- **Why it matters:** the `401`-unsigned / `200`-signed pair proves config
+  resolution *and* signature verification both run end-to-end through the
+  npm-consumed adapter — a config failure would have been a `500`. The bot's
+  actual `thread.post` reply fails in the background against the dummy Velt API
+  (expected); the genuine live reply path is the Railway deploy (#9).
 
 ---
 
