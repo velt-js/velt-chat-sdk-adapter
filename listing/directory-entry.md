@@ -16,7 +16,7 @@ PR — the fields below map to what each adapter card + page shows.
 | Package | `@velt-js/chat-sdk-adapter` |
 | Install | `npm i @velt-js/chat-sdk-adapter chat` |
 | Repository | https://github.com/velt-js/velt-chat-sdk-adapter |
-| Documentation | https://docs.velt.dev/integrations/chat-sdk-bot |
+| Documentation | https://velt.dev/docs/integrations/chat-sdk-bot |
 | Maintainer | Velt (`velt-js` org) |
 | License | Apache-2.0 |
 

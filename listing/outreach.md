@@ -28,7 +28,7 @@ the [adapter directory](https://chat-sdk.dev/adapters).
 
 On the vendor-official requirements:
 - ✅ Hosted in our GitHub org (`velt-js`)
-- ✅ Documented in our primary docs: https://docs.velt.dev/integrations/chat-sdk-bot
+- ✅ Documented in our primary docs: https://velt.dev/docs/integrations/chat-sdk-bot
 - ✅ We commit to maintaining it
 - ✅ Announcement on our changelog + social (coming with the listing)
 

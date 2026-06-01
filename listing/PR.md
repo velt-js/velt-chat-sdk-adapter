@@ -38,6 +38,6 @@ issue template, or post in GitHub Discussions (see `outreach.md`).
 
 ## Prerequisites before submitting
 - ✅ `@velt-js/chat-sdk-adapter` published to npm (done).
-- ⬜ The docs link in `velt.mdx` (`https://docs.velt.dev/integrations/chat-sdk-bot`)
+- ⬜ The docs link in `velt.mdx` (`https://velt.dev/docs/integrations/chat-sdk-bot`)
   must resolve — commit + deploy that page in the Velt docs repo first.
 - Re-pin the `readme` SHA in the `adapters.json` entry if `main` advances.
