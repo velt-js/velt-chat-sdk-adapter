@@ -9,6 +9,10 @@ reply back into the thread.
 This is the AI counterpart to [`nextjs-velt-bot`](../nextjs-velt-bot) (the basic
 greeting bot).
 
+**See it live:** open the
+[Velt tiptap comments demo](https://sample-apps-tiptap-comments-demo.vercel.app),
+leave a comment, and @-mention **Velt Bot** — this example is the responder.
+
 ## How it works
 
 ```ts

@@ -9,7 +9,8 @@ This is a monorepo:
 | Package | Description |
 | --- | --- |
 | [`packages/chat-sdk-adapter`](./packages/chat-sdk-adapter) | The publishable `@veltdev/chat-sdk-adapter` package. |
-| [`examples/nextjs-velt-bot`](./examples/nextjs-velt-bot) | A runnable Next.js example bot. |
+| [`examples/nextjs-velt-bot`](./examples/nextjs-velt-bot) | A runnable Next.js greeting bot. |
+| [`examples/nextjs-velt-ai-bot`](./examples/nextjs-velt-ai-bot) | A runnable Next.js AI bot that streams Claude replies. |
 
 ## Quick start
 
@@ -33,6 +34,13 @@ npm run dev
 Then configure a Velt webhook pointing at `/api/webhooks/velt` and @-mention the
 bot in any comment thread. See the
 [example README](./examples/nextjs-velt-bot/README.md).
+
+## Live demo
+
+Try the AI bot live: open the
+**[Velt tiptap comments demo](https://sample-apps-tiptap-comments-demo.vercel.app)**,
+leave a comment, and @-mention **Velt Bot** — it streams a reply back into the thread.
+The responder is the [`nextjs-velt-ai-bot`](./examples/nextjs-velt-ai-bot) example.
 
 ## License
 

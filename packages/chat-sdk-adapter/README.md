@@ -59,6 +59,17 @@ export async function POST(request: Request) {
 }
 ```
 
+## Examples & live demo
+
+**Try it live:** open the
+**[Velt tiptap comments demo](https://sample-apps-tiptap-comments-demo.vercel.app)**,
+leave a comment, and @-mention **Velt Bot** — it streams a reply back into the thread.
+
+Runnable example apps:
+
+- **[nextjs-velt-ai-bot](https://github.com/velt-js/velt-chat-sdk-adapter/tree/main/examples/nextjs-velt-ai-bot)** — AI bot that streams Claude replies (the demo above runs this).
+- **[nextjs-velt-bot](https://github.com/velt-js/velt-chat-sdk-adapter/tree/main/examples/nextjs-velt-bot)** — minimal greeting bot.
+
 ## Configuration
 
 | Option | Env fallback | Required | Description |
