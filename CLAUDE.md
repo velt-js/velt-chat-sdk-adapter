@@ -368,6 +368,34 @@ velt-chat-sdk-adapter/                 (npm-workspaces monorepo)
   actual `thread.post` reply fails in the background against the dummy Velt API
   (expected); the genuine live reply path is the Railway deploy (#9).
 
+### 19. Investigated full-document context → confirmed not server-readable, kept highlight-only
+- **Did:** Briefly wired `resolveDocumentContext()` to fetch `documentUrl` and strip
+  readable text (`45ae858`), then **investigated where the live document content
+  actually lives** and **reverted to the documented no-op** (`bfcf1ff`).
+- **Findings (the point of the entry):**
+  - **`anchoredText` already works** — the webhook carries the real highlighted
+    snippet the comment sits on (a live payload had `"usz@google.com"`); it reaches
+    Claude today. `documentName` too.
+  - **`documentUrl` is often absent** in real Svix payloads (the live tiptap one had
+    only `documentName` + `documentId`), and when present it points at a **client-side
+    SPA** — a server fetch returns an empty Next.js app shell, not the prose.
+  - **The tiptap demo (`velt-js/sample-apps`) persists no content** — the doc is a
+    hardcoded constant injected client-side; no DB, **no CRDT**. Edits are ephemeral;
+    only comments are saved in Velt. So there is **nothing for a backend to read**.
+  - **Velt CRDT read exists** — `POST /v2/crdt/get` (headers `x-velt-api-key` +
+    `x-velt-auth-token`, body `{ data: { organizationId, documentId } }`) returns
+    document content, **but only if the editor stores it in Velt CRDT** (this demo
+    doesn't). The comments REST API does **not** return anchored text; the
+    documents endpoint returns metadata only.
+- **Decision:** revert to highlight-only (`return null`). For the current setup the
+  full body is genuinely unreachable, and `documentName` + `anchoredText` already
+  give grounded answers. Kept sharpened docs in `document-context.ts` listing the
+  three real enable-paths (Velt CRDT / your DB / server-rendered URL).
+- **To get true full-doc context later:** store the editor content in **Velt CRDT**,
+  then `resolveDocumentContext` becomes a `/v2/crdt/get` call. That needs the app
+  (not the adapter) to adopt CRDT — a separate cross-repo change, deliberately not
+  done (cf. #11).
+
 ---
 
 ## Velt vs Liveblocks — bot/adapter feature comparison
@@ -426,7 +454,10 @@ annotations) and group mentions; reactions need self-hosted.
 - **Self-hosted reaction-write path** is coded defensively but still unexercised.
 - **Full-document context** is a hook only (off by default) — the bot uses the
   lightweight context (title/url/anchored text) unless `resolveDocumentContext`
-  is wired.
+  is wired. Investigated (#19): the full body is **not server-readable** for the
+  tiptap demo (content is hardcoded client-side, never persisted). Enabling it
+  requires the *app* to store content in Velt CRDT (then read via `/v2/crdt/get`),
+  or a DB/CMS the bot can query — not something the adapter can do alone.
 
 ---
 
