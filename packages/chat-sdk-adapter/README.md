@@ -63,12 +63,12 @@ export async function POST(request: Request) {
 
 **Try it live:** open the
 **[Velt tiptap comments demo](https://sample-apps-tiptap-comments-demo.vercel.app)**,
-leave a comment, and @-mention **Velt Bot** — it streams a reply back into the thread.
+leave a comment, and @-mention **Velt Bot**, and it streams a reply back into the thread.
 
 Runnable example apps:
 
-- **[nextjs-velt-ai-bot](https://github.com/velt-js/velt-chat-sdk-adapter/tree/main/examples/nextjs-velt-ai-bot)** — AI bot that streams Claude replies (the demo above runs this).
-- **[nextjs-velt-bot](https://github.com/velt-js/velt-chat-sdk-adapter/tree/main/examples/nextjs-velt-bot)** — minimal greeting bot.
+- **[nextjs-velt-ai-bot](https://github.com/velt-js/velt-chat-sdk-adapter/tree/main/examples/nextjs-velt-ai-bot)**: the AI bot that streams Claude replies (the demo above runs this).
+- **[nextjs-velt-bot](https://github.com/velt-js/velt-chat-sdk-adapter/tree/main/examples/nextjs-velt-bot)**: a minimal greeting bot.
 
 ## Configuration
 
@@ -78,11 +78,11 @@ Runnable example apps:
 | `webhookSecret` | `VELT_WEBHOOK_SECRET` | ✅ | Webhook signing secret (`whsec_…` for v2; Console auth token for v1). |
 | `botUserId` | `VELT_BOT_USER_ID` | ✅ | The bot's Velt user id. |
 | `botUserName` | `VELT_BOT_USER_NAME` | ✅ | The bot's display name (used for @-mention detection). |
-| `authToken` | `VELT_AUTH_TOKEN` | — | Bot auth token. If omitted, generated from the API key for `botUserId` and refreshed automatically. |
-| `organizationId` | `VELT_ORGANIZATION_ID` | — | Default org; used to scope generated tokens and as a webhook fallback. |
-| `webhookVersion` | — | — | `"v2"` (default) or `"v1"`. |
-| `resolveUsers` | — | — | `({ userIds }) => UserInfo[]` — resolves ids to display info. |
-| `selfHostingConfig` | — | — | Enables reaction **writes** via a self-hosted backend (see below). |
+| `authToken` | `VELT_AUTH_TOKEN` | - | Bot auth token. If omitted, generated from the API key for `botUserId` and refreshed automatically. |
+| `organizationId` | `VELT_ORGANIZATION_ID` | - | Default org; used to scope generated tokens and as a webhook fallback. |
+| `webhookVersion` | - | - | `"v2"` (default) or `"v1"`. |
+| `resolveUsers` | - | - | `({ userIds }) => UserInfo[]` that resolves ids to display info. |
+| `selfHostingConfig` | - | - | Enables reaction **writes** via a self-hosted backend (see below). |
 
 ## How Velt maps to the Chat SDK
 
@@ -146,8 +146,8 @@ Configure a Velt webhook (Console → **Configurations → Webhook Service**, or
 Reading reactions (`onReaction`) works on all Velt plans.
 
 **Writing** reactions (`addReaction` / `removeReaction`) is **not supported on
-the managed Velt backend** — Velt has no managed REST endpoint to add a reaction
-as a user. Calling them throws a clear `PermissionError`. To enable reaction
+the managed Velt backend**, because Velt has no managed REST endpoint to add a
+reaction as a user. Calling them throws a clear `PermissionError`. To enable reaction
 writes, provide a `selfHostingConfig.reactionsService` (a `@veltdev/node`
 self-hosted reactions service backed by your own MongoDB); the adapter then
 delegates to its `saveReactions` / `deleteReaction` methods.

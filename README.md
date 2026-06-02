@@ -39,7 +39,7 @@ bot in any comment thread. See the
 
 Try the AI bot live: open the
 **[Velt tiptap comments demo](https://sample-apps-tiptap-comments-demo.vercel.app)**,
-leave a comment, and @-mention **Velt Bot** — it streams a reply back into the thread.
+leave a comment, and @-mention **Velt Bot**, and it streams a reply back into the thread.
 The responder is the [`nextjs-velt-ai-bot`](./examples/nextjs-velt-ai-bot) example.
 
 ## License

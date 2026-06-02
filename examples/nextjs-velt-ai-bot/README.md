@@ -11,7 +11,7 @@ greeting bot).
 
 **See it live:** open the
 [Velt tiptap comments demo](https://sample-apps-tiptap-comments-demo.vercel.app),
-leave a comment, and @-mention **Velt Bot** — this example is the responder.
+leave a comment, and @-mention **Velt Bot**. This example is the responder.
 
 ## How it works
 
@@ -28,7 +28,7 @@ chat.onNewMention(async (thread) => {
 `toAiMessages` (from `chat/ai`) converts the thread history into LLM messages
 (the bot's own comments become `assistant`, everyone else `user`). The reply is
 streamed via `thread.post(textStream)`. The Velt adapter has no native streaming
-API, so the Chat SDK streams using its **post-then-edit fallback** — it posts a
+API, so the Chat SDK streams using its **post-then-edit fallback**: it posts a
 placeholder, then edits it as chunks arrive.
 
 ## Setup
@@ -45,7 +45,7 @@ placeholder, then edits it as chunks arrive.
 | --- | --- | --- |
 | `AI_PROVIDER` | `anthropic` | `anthropic` or `openai` |
 | `AI_MODEL` | `claude-sonnet-4-6` | any model id for the provider |
-| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | — | key for the chosen provider |
+| `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | - | key for the chosen provider |
 
 ## Connect the webhook
 
@@ -70,7 +70,7 @@ background LLM streaming completes reliably.
    - `VELT_API_KEY`, `VELT_WEBHOOK_SECRET`, `VELT_ORGANIZATION_ID`
      (optionally `VELT_AUTH_TOKEN`)
    - `ANTHROPIC_API_KEY` (or `AI_PROVIDER=openai` + `OPENAI_API_KEY`)
-   - You do **not** set `PORT` — Railway injects it and `next start` binds to it.
+   - You do **not** set `PORT`; Railway injects it and `next start` binds to it.
 4. **Settings → Networking → Generate Domain** to get a public URL.
 5. Point your Velt webhook at `https://<your-domain>/api/webhooks/velt` (see the
    webhook steps above), then redeploy if you changed `VELT_WEBHOOK_SECRET`.
