@@ -1,6 +1,6 @@
 {
   "name": "@veltdev/chat-sdk-adapter",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Chat SDK adapter for Velt: build bots that read, reply, mention, and start threads in anchored comments across documents, editors, canvases, PDFs, and video.",
   "type": "module",
   "license": "Apache-2.0",

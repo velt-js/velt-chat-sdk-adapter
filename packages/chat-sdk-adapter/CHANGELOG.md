@@ -6,6 +6,12 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.4]
+
+### Changed
+- Sharpened the package description to reflect read / reply / mention / start-thread
+  capabilities.
+
 ## [0.2.3]
 
 ### Added
@@ -14,8 +20,6 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   it to `@Name`, and sets `to` / `taggedUserContacts` so Velt notifies the user.
 
 ### Changed
-- Sharpened the package description to reflect read / reply / mention / start-thread
-  capabilities.
 - Aligned `@chat-adapter/shared` to `^4.30.0` so the whole `chat` ecosystem
   (incl. `@chat-adapter/state-redis`) dedupes to a single `chat` version.
 
