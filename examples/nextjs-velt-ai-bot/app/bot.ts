@@ -19,8 +19,8 @@ const SYSTEM_PROMPT =
   "given the FULL contents of the other open comment threads on this document, so " +
   "use them when asked. Images shared in this thread are provided to you directly, " +
   "so read and describe what you actually see; for non-image files you are given " +
-  "only the filename, so never guess their contents. If a teammate asks you to " +
-  "start a new thread, that action is handled for you.";
+  "only the filename, so never guess their contents. Never claim you have started, " +
+  "created, or posted a new thread yourself — that is handled outside of your reply.";
 
 /**
  * Assemble the per-message context: document info, attached files, and the other
@@ -94,13 +94,23 @@ async function maybeStartThread(
   thread: Thread,
   message: Message,
 ): Promise<string | null> {
-  // Require an explicit topic via an "about/on/for/:/-" connector, so a bare
-  // "can you start a new thread?" falls through to the LLM (which will ask what about).
-  const match = message.text.match(
-    /\b(?:new thread|start (?:a )?(?:new )?thread)\b(?:\s+(?:about|on|regarding|for)\b|\s*[:-])\s*(.+)/i,
+  // Catch the *intent* to start a thread (even with no topic) so the LLM never
+  // handles it and can't falsely claim it created one.
+  const wantsThread = /\b(?:start|create|open|make)\s+(?:a\s+)?(?:new\s+)?thread\b|\bnew thread\b/i.test(
+    message.text,
   );
-  const topic = match?.[1]?.replace(/[?!.\s]+$/, "").trim();
-  if (!topic || topic.length < 2) return null;
+  if (!wantsThread) return null;
+
+  // Pull an explicit topic if one was given (via about/on/regarding/for/:/-).
+  const topicMatch = message.text.match(
+    /\bthread\b(?:\s+(?:about|on|regarding|for)\b|\s*[:-])\s*(.+)/i,
+  );
+  const topic = topicMatch?.[1]?.replace(/[?!.\s]+$/, "").trim();
+  if (!topic || topic.length < 2) {
+    // Intent without a topic: ask, rather than creating a "?"-titled thread.
+    return 'Sure — what should the new thread be about? Tell me a topic (e.g. "start a thread about edge cases") and I\'ll create it.';
+  }
+
   const channelId = velt.channelIdFromThreadId(thread.id);
   await velt.postChannelMessage(
     channelId,
