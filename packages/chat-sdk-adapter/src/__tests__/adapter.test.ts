@@ -297,6 +297,29 @@ describe("attachments", () => {
   });
 });
 
+describe("mentions (outbound)", () => {
+  it("turns a {{userId}} token into @Name + taggedUserContacts", async () => {
+    const fetchMock = stubFetch([555]);
+    const adapter = createVeltAdapter({
+      ...BASE_CONFIG,
+      resolveUsers: ({ userIds }) =>
+        userIds.map((id) => (id === "user-9" ? { name: "Dana Scully" } : undefined)),
+    });
+    expect(adapter.mentionUser("user-9")).toBe("{{user-9}}");
+
+    const threadId = adapter.encodeThreadId({ organizationId: "org-1", documentId: "doc-1", annotationId: "ann-1" });
+    await adapter.postMessage(threadId, `welcome ${adapter.mentionUser("user-9")}!`);
+
+    const [, init] = fetchMock.mock.calls[0]!;
+    const sent = JSON.parse((init as RequestInit).body as string).data.commentData[0];
+    expect(sent.commentText).toContain("@Dana Scully");
+    expect(sent.commentText).not.toContain("{{");
+    expect(sent.taggedUserContacts[0].userId).toBe("user-9");
+    expect(sent.taggedUserContacts[0].text).toBe("@Dana Scully");
+    expect(sent.triggerNotification).toBe(true);
+  });
+});
+
 describe("reactions", () => {
   it("throws on the managed backend", async () => {
     const adapter = makeAdapter();

@@ -6,6 +6,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Outbound mentions: `adapter.mentionUser(userId)` returns a `{{userId}}` token;
+  posting a message containing it resolves the name (via `resolveUsers`), rewrites
+  it to `@Name`, and sets `to` / `taggedUserContacts` so Velt notifies the user.
+
 ## [0.2.2]
 
 ### Changed

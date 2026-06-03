@@ -18,7 +18,11 @@ export interface VeltCommentInput {
   commentText?: string;
   commentHtml?: string;
   from: { userId: string; name?: string; email?: string };
+  /** Users @-mentioned in this comment (notified by Velt). */
+  to?: VeltUser[];
   taggedUserContacts?: VeltTaggedContact[];
+  /** Ask Velt to notify the mentioned users. */
+  triggerNotification?: boolean;
   attachments?: VeltAttachment[];
   createdAt?: number;
   lastUpdated?: number;

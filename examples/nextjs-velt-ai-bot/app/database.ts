@@ -19,8 +19,17 @@ const USERS: UserRecord[] = [
   { userId: BOT_USER_ID, name: BOT_USER_NAME },
 ];
 
+// Names learned from incoming comments at runtime, so mentions of real users
+// (whom this mock DB doesn't know up front) still render with their display name.
+const seenUsers = new Map<string, UserRecord>();
+
+/** Record a user seen on an incoming comment, so we can resolve them later. */
+export function rememberUser(userId?: string, name?: string, email?: string): void {
+  if (userId && name) seenUsers.set(userId, { userId, name, email });
+}
+
 export function getUser(userId: string): { name: string; avatarUrl?: string; email?: string } | null {
-  const user = USERS.find((u) => u.userId === userId);
+  const user = USERS.find((u) => u.userId === userId) ?? seenUsers.get(userId);
   if (!user) return null;
   return { name: user.name, avatarUrl: user.photoUrl, email: user.email };
 }

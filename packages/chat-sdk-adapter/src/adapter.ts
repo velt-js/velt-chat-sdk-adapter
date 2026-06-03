@@ -25,7 +25,7 @@ import { VeltRestClient, type VeltCommentInput } from "./client.js";
 import { resolveConfig } from "./config.js";
 import { ADAPTER_NAME, notSupported } from "./errors.js";
 import { VeltFormatConverter } from "./format-converter.js";
-import { isBotMentioned, normalizeMentionTokens } from "./mentions.js";
+import { buildMentionFields, isBotMentioned, normalizeMentionTokens } from "./mentions.js";
 import { parseVeltWebhook } from "./webhook/parse.js";
 import { verifyVeltWebhook } from "./webhook/verify.js";
 import type {
@@ -155,7 +155,7 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
     message: AdapterPostableMessage,
   ): Promise<RawMessage<VeltRawMessage>> {
     const ctx = this.decodeThreadId(threadId);
-    const input = this.toCommentInput(message);
+    const input = await this.toCommentInput(message);
     const ids = await this.client.addComments({ ...ctx, commentData: [input] });
     const commentId = ids[0] ?? input.commentId ?? 0;
     return {
@@ -171,7 +171,7 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
     message: AdapterPostableMessage,
   ): Promise<RawMessage<VeltRawMessage>> {
     const ctx = this.decodeThreadId(threadId);
-    const input = this.toCommentInput(message);
+    const input = await this.toCommentInput(message);
     await this.client.updateComments({
       ...ctx,
       commentIds: [Number(messageId)],
@@ -288,7 +288,7 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
     message: AdapterPostableMessage,
   ): Promise<RawMessage<VeltRawMessage>> {
     const ctx = this.decodeChannelId(channelId);
-    const input = this.toCommentInput(message);
+    const input = await this.toCommentInput(message);
     const { annotationId, commentIds } = await this.client.createAnnotation({
       ...ctx,
       commentData: [input],
@@ -304,6 +304,15 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
 
   renderFormatted(content: FormattedContent): string {
     return this.converter.fromAst(content);
+  }
+
+  /**
+   * The Chat SDK mention token for a user. Include it in a posted message (e.g.
+   * `thread.post(\`thanks ${chat.mentionUser(userId)}\`)`) and the adapter turns it
+   * into a real Velt mention (sets `taggedUserContacts` so the user is notified).
+   */
+  mentionUser(userId: string): string {
+    return `{{${userId}}}`;
   }
 
   /** Velt has no bot typing-indicator primitive; this is a no-op. */
@@ -484,19 +493,44 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
     };
   }
 
-  private toCommentInput(message: AdapterPostableMessage): VeltCommentInput {
+  private async toCommentInput(message: AdapterPostableMessage): Promise<VeltCommentInput> {
     const html = (this.converter as BaseFormatConverter).renderPostable(
       message as never,
     );
-    const text = this.converter.extractPlainText(html);
+    let commentText = this.converter.extractPlainText(html);
+    let commentHtml = html;
     const attachments = this.fromAttachments(
       (message as { attachments?: Attachment[] })?.attachments,
     );
+
+    // Turn `{{userId}}` mention tokens (from `mentionUser`) into `@Name` text plus
+    // the structured `to` / `taggedUserContacts` Velt needs to notify the user.
+    let mention: ReturnType<typeof buildMentionFields> | undefined;
+    const ids = mentionIds(`${commentText} ${commentHtml}`);
+    if (ids.length) {
+      const infos = this.config.resolveUsers
+        ? await this.config.resolveUsers({ userIds: ids })
+        : [];
+      const users: VeltUser[] = ids.map((id, i) => ({
+        userId: id,
+        name: infos[i]?.name ?? infos[i]?.fullName ?? id,
+      }));
+      const nameById = new Map(users.map((u) => [u.userId, u.name]));
+      const replace = (s: string): string =>
+        s.replace(/\{\{([^}]+)\}\}/g, (_m, id: string) => `@${nameById.get(id) ?? id}`);
+      commentText = replace(commentText);
+      commentHtml = replace(commentHtml);
+      mention = buildMentionFields(users);
+    }
+
     return {
-      commentText: text,
-      commentHtml: html,
+      commentText,
+      commentHtml,
       from: { userId: this.botUserId, name: this.userName },
       ...(attachments.length ? { attachments } : {}),
+      ...(mention
+        ? { to: mention.to, taggedUserContacts: mention.taggedUserContacts, triggerNotification: true }
+        : {}),
     };
   }
 
@@ -572,6 +606,13 @@ function normalizeEmojiName(raw: string): string {
 
 function emojiName(emoji: EmojiValue | string): string {
   return typeof emoji === "string" ? emoji : emoji.name;
+}
+
+/** Unique `{{userId}}` mention-token ids found in a string. */
+function mentionIds(text: string): string[] {
+  const ids = new Set<string>();
+  for (const m of text.matchAll(/\{\{([^}]+)\}\}/g)) ids.add(m[1]!);
+  return [...ids];
 }
 
 /** Map a Velt attachment kind to the Chat SDK attachment type. */

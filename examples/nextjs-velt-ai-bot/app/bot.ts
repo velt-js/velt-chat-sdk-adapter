@@ -3,7 +3,7 @@ import { toAiMessages, type AiMessage, type AiMessagePart } from "chat/ai";
 import { streamText } from "ai";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { createVeltAdapter, type VeltAdapter, type VeltRawMessage } from "@veltdev/chat-sdk-adapter";
-import { BOT_USER_ID, BOT_USER_NAME, resolveUsers } from "./database";
+import { BOT_USER_ID, BOT_USER_NAME, rememberUser, resolveUsers } from "./database";
 import { resolveModel } from "./model";
 import { resolveDocumentContext } from "./document-context";
 
@@ -112,11 +112,13 @@ async function maybeStartThread(
   }
 
   const channelId = velt.channelIdFromThreadId(thread.id);
+  // Tag the requester in the new thread so they're notified and credited.
+  const requester = message.author?.userId ? velt.mentionUser(message.author.userId) : "a teammate";
   await velt.postChannelMessage(
     channelId,
-    `New thread (started by Velt Bot at a teammate's request): ${topic}`,
+    `New thread started by Velt Bot for ${requester}: ${topic}`,
   );
-  return `Started a new comment thread on this document about "${topic}".`;
+  return `Started a new comment thread on this document about "${topic}" and tagged you in it.`;
 }
 
 /** Image attachments (with a URL) across the messages, deduped and capped. */
@@ -221,6 +223,8 @@ export function getChat(): Chat<{ velt: VeltAdapter }> {
     try {
       console.log(`[bot] replying in thread ${thread.id}`);
       const velt = thread.adapter as unknown as VeltAdapter;
+      // Remember who's talking so mentions of them resolve to their display name.
+      rememberUser(message.author?.userId, message.author?.fullName);
 
       // Command: "start a new thread about X" -> create one via postChannelMessage.
       const started = await maybeStartThread(velt, thread, message);
