@@ -1,8 +1,8 @@
 # @veltdev/chat-sdk-adapter
 
-Build bots that read and reply in **[Velt](https://velt.dev) comment threads**
-across documents, rich-text editors, canvases, PDFs, and video, using the
-**[Chat SDK](https://chat-sdk.dev)**.
+Build bots that read, reply, mention, and start threads in
+**[Velt](https://velt.dev) comment threads** across documents, rich-text editors,
+canvases, PDFs, and video, using the **[Chat SDK](https://chat-sdk.dev)**.
 
 The Chat SDK exposes platform-agnostic events (`onNewMention`, `onReaction`,
 `onSubscribedMessage`) and methods (`thread.post`, `addReaction`, …). This
