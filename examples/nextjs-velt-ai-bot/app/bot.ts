@@ -102,14 +102,25 @@ const pendingTopicKey = (threadId: string): string => `pending-thread-topic:${th
  * then (only for a direct answer) the whole message minus a leading @mention.
  */
 function extractTopic(text: string, allowWhole: boolean): string | null {
-  const quoted = text.match(/["“”']([^"“”']{2,})["“”']/);
-  if (quoted) return quoted[1]!.trim();
+  // Prefer double/curly quotes so a contraction apostrophe (e.g. the ' in "Let's")
+  // isn't mistaken for a quote delimiter.
+  const doubleQuoted = text.match(/["“”]([^"“”]{2,})["“”]/);
+  if (doubleQuoted) return doubleQuoted[1]!.trim();
+  // A single-quoted phrase, but only when it actually reads as a quote (the
+  // opening quote follows whitespace/start and the closing one precedes space/end).
+  const singleQuoted = text.match(/(?:^|\s)['‘]([^'’]{2,})['’](?=$|\s|[.,!?])/);
+  if (singleQuoted) return singleQuoted[1]!.trim();
   const connector =
     text.match(/\b(?:about|on|regarding|for)\b\s+(.+)/i) ?? text.match(/\bthread\b\s*[:-]\s*(.+)/i);
   if (connector) return connector[1]!.replace(/[?!.\s]+$/, "").trim() || null;
   if (allowWhole) {
     const whole = text
       .replace(/^\s*@[\w.-]+(?:\s+[A-Z][\w.'-]*)?\s*/, "") // drop a leading @Mention
+      // strip common lead-ins so "let's title it X" / "call it X" -> "X"
+      .replace(
+        /^\s*(?:let'?s\s+)?(?:(?:title|call|name)\s+it|make\s+it|have\s+the\s+(?:first\s+)?(?:message|title)\s+(?:be|as)|the\s+title\s+(?:is|should\s+be))\s*[:]?\s*/i,
+        "",
+      )
       .replace(/[?!.\s]+$/, "")
       .trim();
     return whole.length >= 2 ? whole : null;
