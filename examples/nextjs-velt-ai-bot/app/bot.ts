@@ -1,7 +1,8 @@
-import { Chat, type Thread, type Message } from "chat";
+import { Chat, type Thread, type Message, type StateAdapter } from "chat";
 import { toAiMessages, type AiMessage, type AiMessagePart } from "chat/ai";
 import { streamText } from "ai";
 import { createMemoryState } from "@chat-adapter/state-memory";
+import { createRedisState } from "@chat-adapter/state-redis";
 import { createVeltAdapter, type VeltAdapter, type VeltRawMessage } from "@veltdev/chat-sdk-adapter";
 import { BOT_USER_ID, BOT_USER_NAME, rememberUser, resolveUsers } from "./database";
 import { resolveModel } from "./model";
@@ -89,11 +90,12 @@ async function buildContextBlock(
  * about edge cases"), create one on the document via `postChannelMessage` and
  * return a confirmation. Returns null if the message isn't such a request.
  */
-// Threads where the bot asked "what should the new thread be about?" and is
-// waiting to use the next message as the topic. In-memory (per process).
-const pendingThreadTopic = new Set<string>();
-
 const WANTS_THREAD = /\b(?:start|create|open|make)\s+(?:a\s+)?(?:new\s+)?thread\b|\bnew thread\b/i;
+
+// "Awaiting a topic" lives in the Chat SDK state store (Redis in production), so
+// the two-step flow survives restarts and works across multiple bot instances.
+const PENDING_TOPIC_TTL_MS = 10 * 60 * 1000;
+const pendingTopicKey = (threadId: string): string => `pending-thread-topic:${threadId}`;
 
 /**
  * Extract a thread topic: prefer quoted text, then an about/on/for/:/- connector,
@@ -137,16 +139,18 @@ async function createThread(
  * bot asks for one and then creates the thread from the next message in this thread.
  */
 async function maybeStartThread(
+  state: StateAdapter,
   velt: VeltAdapter,
   thread: Thread,
   message: Message,
 ): Promise<string | null> {
   const text = message.text ?? "";
   const wantsThread = WANTS_THREAD.test(text);
+  const key = pendingTopicKey(thread.id);
 
   // Step 2: we previously asked this thread for a topic — treat this as the answer.
-  if (pendingThreadTopic.has(thread.id) && !wantsThread) {
-    pendingThreadTopic.delete(thread.id);
+  if (!wantsThread && (await state.get<boolean>(key))) {
+    await state.delete(key);
     const topic = extractTopic(text, true);
     return topic ? createThread(velt, thread, message, topic) : null;
   }
@@ -156,10 +160,10 @@ async function maybeStartThread(
   // Step 1: explicit request. Use an inline topic if given, else ask for one.
   const topic = extractTopic(text, false);
   if (!topic) {
-    pendingThreadTopic.add(thread.id);
+    await state.set(key, true, PENDING_TOPIC_TTL_MS);
     return 'Sure, what should the new thread be about? Tell me a topic (e.g. "start a thread about edge cases") and I\'ll create it.';
   }
-  pendingThreadTopic.delete(thread.id);
+  await state.delete(key);
   return createThread(velt, thread, message, topic);
 }
 
@@ -243,6 +247,11 @@ let chatSingleton: Chat<{ velt: VeltAdapter }> | null = null;
 export function getChat(): Chat<{ velt: VeltAdapter }> {
   if (chatSingleton) return chatSingleton;
 
+  // Persistent state when REDIS_URL is set (createRedisState auto-detects it), so
+  // subscriptions, dedup, and the bot's "awaiting a thread topic" flag survive
+  // restarts; falls back to in-memory state for local/zero-config runs.
+  const state: StateAdapter = process.env.REDIS_URL ? createRedisState() : createMemoryState();
+
   const chat = new Chat<{ velt: VeltAdapter }>({
     userName: BOT_USER_NAME,
     adapters: {
@@ -255,7 +264,7 @@ export function getChat(): Chat<{ velt: VeltAdapter }> {
         logger: console,
       }),
     },
-    state: createMemoryState(),
+    state,
   });
 
   // Fetch the thread history, ask the LLM, and stream the reply back into the
@@ -269,7 +278,7 @@ export function getChat(): Chat<{ velt: VeltAdapter }> {
       rememberUser(message.author?.userId, message.author?.fullName);
 
       // Command: "start a new thread about X" -> create one via postChannelMessage.
-      const started = await maybeStartThread(velt, thread, message);
+      const started = await maybeStartThread(state, velt, thread, message);
       if (started) {
         await thread.post(started);
         console.log(`[bot] started a new thread from ${thread.id}`);

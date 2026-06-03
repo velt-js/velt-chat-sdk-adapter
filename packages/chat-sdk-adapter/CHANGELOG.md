@@ -6,6 +6,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Aligned `@chat-adapter/shared` to `^4.30.0` so the whole `chat` ecosystem
+  (incl. `@chat-adapter/state-redis`) dedupes to a single `chat` version.
+
 ### Added
 - Outbound mentions: `adapter.mentionUser(userId)` returns a `{{userId}}` token;
   posting a message containing it resolves the name (via `resolveUsers`), rewrites

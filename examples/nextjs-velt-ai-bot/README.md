@@ -46,6 +46,7 @@ placeholder, then edits it as chunks arrive.
 | `AI_PROVIDER` | `anthropic` | `anthropic` or `openai` |
 | `AI_MODEL` | `claude-sonnet-4-6` | any model id for the provider |
 | `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` | - | key for the chosen provider |
+| `REDIS_URL` | - | if set, uses `@chat-adapter/state-redis` for persistent state (subscriptions, dedup, and the bot's "awaiting a thread topic" flag survive restarts); otherwise in-memory |
 
 ## Connect the webhook
 

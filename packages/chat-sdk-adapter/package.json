@@ -52,7 +52,7 @@
     "chat": "^4.0.0"
   },
   "dependencies": {
-    "@chat-adapter/shared": "^4.29.0",
+    "@chat-adapter/shared": "^4.30.0",
     "hast-util-from-html": "^2.0.3",
     "hast-util-to-html": "^9.0.5",
     "hast-util-to-mdast": "^10.1.2",
@@ -63,7 +63,7 @@
     "@types/hast": "^3.0.4",
     "@types/mdast": "^4.0.4",
     "@types/node": "^20.14.0",
-    "chat": "^4.29.0",
+    "chat": "^4.30.0",
     "eslint": "^9.0.0",
     "tsup": "^8.3.0",
     "typescript": "^5.5.0",

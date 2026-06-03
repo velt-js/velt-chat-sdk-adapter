@@ -12,10 +12,11 @@
   "dependencies": {
     "@ai-sdk/anthropic": "^3.0.0",
     "@ai-sdk/openai": "^3.0.0",
-    "@chat-adapter/state-memory": "^4.29.0",
+    "@chat-adapter/state-memory": "^4.30.0",
+    "@chat-adapter/state-redis": "^4.30.0",
     "@veltdev/chat-sdk-adapter": "^0.2.0",
     "ai": "^6.0.0",
-    "chat": "^4.29.0",
+    "chat": "^4.30.0",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
