@@ -6,7 +6,10 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.2.0]
+## [0.2.1]
+
+First published build of the channel-methods + attachments work (0.2.0 was not
+released).
 
 ### Added
 - Channel/document-level methods, all backed by Velt's **managed** REST API:
