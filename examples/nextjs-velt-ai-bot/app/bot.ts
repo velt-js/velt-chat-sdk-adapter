@@ -21,7 +21,7 @@ const SYSTEM_PROMPT =
   "use them when asked. Images shared in this thread are provided to you directly, " +
   "so read and describe what you actually see; for non-image files you are given " +
   "only the filename, so never guess their contents. Never claim you have started, " +
-  "created, or posted a new thread yourself — that is handled outside of your reply.";
+  "created, or posted a new thread yourself; that is handled outside of your reply.";
 
 /**
  * Assemble the per-message context: document info, attached files, and the other
@@ -128,20 +128,10 @@ function extractTopic(text: string, allowWhole: boolean): string | null {
   return null;
 }
 
-async function createThread(
-  velt: VeltAdapter,
-  thread: Thread,
-  message: Message,
-  topic: string,
-): Promise<string> {
+async function createThread(velt: VeltAdapter, thread: Thread, topic: string): Promise<string> {
   const channelId = velt.channelIdFromThreadId(thread.id);
-  // Tag the requester in the new thread so they're notified and credited.
-  const requester = message.author?.userId ? velt.mentionUser(message.author.userId) : "a teammate";
-  await velt.postChannelMessage(
-    channelId,
-    `${topic}\n\n(New thread started by Velt Bot for ${requester}.)`,
-  );
-  return `Done! I created a new thread starting with "${topic}" and tagged you in it.`;
+  await velt.postChannelMessage(channelId, topic);
+  return `Done! I created a new thread: "${topic}".`;
 }
 
 /**
@@ -159,11 +149,11 @@ async function maybeStartThread(
   const wantsThread = WANTS_THREAD.test(text);
   const key = pendingTopicKey(thread.id);
 
-  // Step 2: we previously asked this thread for a topic — treat this as the answer.
+  // Step 2: we previously asked this thread for a topic, so treat this as the answer.
   if (!wantsThread && (await state.get<boolean>(key))) {
     await state.delete(key);
     const topic = extractTopic(text, true);
-    return topic ? createThread(velt, thread, message, topic) : null;
+    return topic ? createThread(velt, thread, topic) : null;
   }
 
   if (!wantsThread) return null;
@@ -175,7 +165,7 @@ async function maybeStartThread(
     return 'Sure, what should the new thread be about? Tell me a topic (e.g. "start a thread about edge cases") and I\'ll create it.';
   }
   await state.delete(key);
-  return createThread(velt, thread, message, topic);
+  return createThread(velt, thread, topic);
 }
 
 /** Image attachments (with a URL) across the messages, deduped and capped. */
