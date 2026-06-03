@@ -1,5 +1,5 @@
 import { Chat, type Thread, type Message } from "chat";
-import { toAiMessages } from "chat/ai";
+import { toAiMessages, type AiMessage, type AiMessagePart } from "chat/ai";
 import { streamText } from "ai";
 import { createMemoryState } from "@chat-adapter/state-memory";
 import { createVeltAdapter, type VeltAdapter, type VeltRawMessage } from "@veltdev/chat-sdk-adapter";
@@ -16,9 +16,11 @@ const SYSTEM_PROMPT =
   "document (its title/URL and the specific text a comment is anchored to). Use " +
   "that context to give relevant, grounded answers. If you're asked about the " +
   "document and don't have enough context, briefly say what you'd need. You are " +
-  "also given the other open comment threads on the same document and any files " +
-  "the user attached; draw on them when relevant. If a teammate asks you to start " +
-  "a new thread, that action is handled for you.";
+  "given the FULL contents of the other open comment threads on this document, so " +
+  "use them when asked. Images shared in this thread are provided to you directly, " +
+  "so read and describe what you actually see; for non-image files you are given " +
+  "only the filename, so never guess their contents. If a teammate asks you to " +
+  "start a new thread, that action is handled for you.";
 
 /**
  * Assemble the per-message context: document info, attached files, and the other
@@ -36,15 +38,11 @@ async function buildContextBlock(
 
   if (raw?.documentName) lines.push(`Document: "${raw.documentName}"`);
   if (raw?.documentUrl) lines.push(`URL: ${raw.documentUrl}`);
-  if (raw?.anchoredText) lines.push(`The comment is anchored to this text: "${raw.anchoredText}"`);
+  if (raw?.anchoredText) lines.push(`The comment here is anchored to this text: "${raw.anchoredText}"`);
 
-  // Files attached to the triggering comment (parsed by the adapter).
-  if (message.attachments?.length) {
-    const names = message.attachments.map((a) => a.name ?? a.url ?? "file").join(", ");
-    lines.push(`The user attached: ${names}`);
-  }
-
-  // Wider document context via the adapter's channel-level calls.
+  // Wider document context via the adapter's channel-level calls. We include the
+  // FULL conversation of each other thread (not just its first comment), plus the
+  // names of any files attached anywhere in it.
   try {
     const channelId = velt.channelIdFromThreadId(thread.id);
     if (!raw?.documentName) {
@@ -52,13 +50,27 @@ async function buildContextBlock(
       if (info.name) lines.push(`Document: "${info.name}"`);
     }
     const { threads } = await velt.listThreads(channelId, { limit: 10 });
-    const others = threads.filter((t) => t.id !== thread.id && t.rootMessage.text.trim());
+    const others = threads.filter((t) => t.id !== thread.id);
     if (others.length) {
-      const summary = others
-        .slice(0, 5)
-        .map((t) => `- ${t.rootMessage.text.slice(0, 80)}`)
-        .join("\n");
-      lines.push(`Other open comment threads on this document (${others.length}):\n${summary}`);
+      const blocks = await Promise.all(
+        others.slice(0, 5).map(async (t, i) => {
+          let convo = t.rootMessage.text;
+          const atts: string[] = [];
+          try {
+            const { messages: msgs } = await velt.fetchMessages(t.id, { limit: 20 });
+            convo = msgs
+              .map((m) => `  ${m.author.fullName ?? "User"}: ${m.text}`.trimEnd())
+              .filter((s) => s.trim())
+              .join("\n");
+            for (const m of msgs) for (const a of m.attachments ?? []) atts.push(a.name ?? a.url ?? "file");
+          } catch {
+            // fall back to the root message text if the full fetch fails
+          }
+          const attLine = atts.length ? `\n  [attachments: ${atts.join(", ")}]` : "";
+          return `Thread ${i + 1}:\n${convo}${attLine}`;
+        }),
+      );
+      lines.push(`Other open comment threads on this document:\n\n${blocks.join("\n\n")}`);
     }
   } catch (err) {
     console.warn("[bot] channel context unavailable:", err);
@@ -82,15 +94,89 @@ async function maybeStartThread(
   thread: Thread,
   message: Message,
 ): Promise<string | null> {
-  const match = message.text.match(/(?:start (?:a )?|new )thread(?:\s+about)?\s*[:-]?\s*(.+)/i);
-  const topic = match?.[1]?.trim();
-  if (!topic) return null;
+  // Require an explicit topic via an "about/on/for/:/-" connector, so a bare
+  // "can you start a new thread?" falls through to the LLM (which will ask what about).
+  const match = message.text.match(
+    /\b(?:new thread|start (?:a )?(?:new )?thread)\b(?:\s+(?:about|on|regarding|for)\b|\s*[:-])\s*(.+)/i,
+  );
+  const topic = match?.[1]?.replace(/[?!.\s]+$/, "").trim();
+  if (!topic || topic.length < 2) return null;
   const channelId = velt.channelIdFromThreadId(thread.id);
   await velt.postChannelMessage(
     channelId,
     `New thread (started by Velt Bot at a teammate's request): ${topic}`,
   );
   return `Started a new comment thread on this document about "${topic}".`;
+}
+
+/** Image attachments (with a URL) across the messages, deduped and capped. */
+function collectImages(messages: Message[]): { url: string; mediaType?: string }[] {
+  const seen = new Set<string>();
+  const out: { url: string; mediaType?: string }[] = [];
+  for (const m of messages) {
+    for (const a of m.attachments ?? []) {
+      if (a.type === "image" && a.url && !seen.has(a.url)) {
+        seen.add(a.url);
+        out.push({ url: a.url, mediaType: a.mimeType });
+      }
+    }
+  }
+  return out.slice(0, 6);
+}
+
+/** Names of non-image attachments across the messages. */
+function collectFileNames(messages: Message[]): string[] {
+  const names: string[] = [];
+  for (const m of messages) {
+    for (const a of m.attachments ?? []) {
+      if (a.type !== "image") names.push(a.name ?? a.url ?? "file");
+    }
+  }
+  return names;
+}
+
+/**
+ * Attach the thread's images (so the multimodal model can actually read them) and
+ * a note about non-image files to the most recent user turn. Editing the existing
+ * user turn (rather than adding one) keeps the user/assistant alternation intact.
+ */
+function withThreadAttachments(
+  messages: AiMessage[],
+  images: { url: string; mediaType?: string }[],
+  fileNames: string[],
+): AiMessage[] {
+  if (!images.length && !fileNames.length) return messages;
+  let idx = -1;
+  for (let i = messages.length - 1; i >= 0; i--) {
+    if (messages[i]!.role === "user") {
+      idx = i;
+      break;
+    }
+  }
+  if (idx < 0) return messages;
+
+  const prev = messages[idx]!;
+  const baseText =
+    typeof prev.content === "string"
+      ? prev.content
+      : prev.content
+          .filter((p): p is Extract<AiMessagePart, { type: "text" }> => p.type === "text")
+          .map((p) => p.text)
+          .join("\n");
+
+  const parts: AiMessagePart[] = [];
+  if (baseText) parts.push({ type: "text", text: baseText });
+  for (const img of images) parts.push({ type: "image", image: img.url, mediaType: img.mediaType });
+  if (fileNames.length) {
+    parts.push({
+      type: "text",
+      text: `(Non-image files attached in this thread: ${fileNames.join(", ")}. You can see their names but not their contents.)`,
+    });
+  }
+
+  const next = [...messages];
+  next[idx] = { role: "user", content: parts };
+  return next;
 }
 
 let chatSingleton: Chat<{ velt: VeltAdapter }> | null = null;
@@ -141,8 +227,16 @@ export function getChat(): Chat<{ velt: VeltAdapter }> {
       if (messages.length === 0) {
         messages = [{ role: "user", content: message.text }];
       }
-      // Ground the reply in document + channel context (anchored text, attached
-      // files, the document's other open threads, plus any resolveDocumentContext).
+      // Give the multimodal model the actual images shared in this thread (from
+      // the history, which includes the triggering comment), plus the names of any
+      // non-image files, so it can answer about attachments instead of guessing.
+      messages = withThreadAttachments(
+        messages,
+        collectImages(history.messages),
+        collectFileNames(history.messages),
+      );
+      // Ground the reply in document + channel context (anchored text, the full
+      // contents of the document's other open threads, plus any resolveDocumentContext).
       const contextBlock = await buildContextBlock(velt, thread, message);
       const system = contextBlock ? `${SYSTEM_PROMPT}\n\n${contextBlock}` : SYSTEM_PROMPT;
 
