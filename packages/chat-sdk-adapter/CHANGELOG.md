@@ -6,6 +6,11 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.2]
+
+### Changed
+- Sharpened the package description (anchored, multi-surface comments). No code changes.
+
 ## [0.2.1]
 
 First published build of the channel-methods + attachments work (0.2.0 was not
