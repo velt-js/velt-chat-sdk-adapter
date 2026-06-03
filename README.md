@@ -1,8 +1,14 @@
 # velt-chat-sdk-adapter
 
-Chat SDK adapter for Velt. Build cross-platform AI bots that read and respond in
-**[Velt](https://velt.dev) comment threads** using the
-**[Chat SDK](https://chat-sdk.dev)**.
+Chat SDK adapter for Velt: build bots that read and reply in
+**[Velt](https://velt.dev) comment threads** across documents, rich-text editors,
+canvases, PDFs, and video, using the **[Chat SDK](https://chat-sdk.dev)**.
+
+The bot can post, edit, and delete messages; fetch a thread, its history, or a
+single message; list a document's threads and post new ones; read attachments and
+mentions; and act on inbound mentions and reactions. See the
+[package README](./packages/chat-sdk-adapter/README.md#what-it-supports) for the
+full capability list.
 
 This is a monorepo:
 

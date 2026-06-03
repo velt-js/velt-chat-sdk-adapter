@@ -1,7 +1,8 @@
 # @veltdev/chat-sdk-adapter
 
-Build cross-platform bots that read and respond in **[Velt](https://velt.dev)
-comment threads** using the **[Chat SDK](https://chat-sdk.dev)**.
+Build bots that read and reply in **[Velt](https://velt.dev) comment threads**
+across documents, rich-text editors, canvases, PDFs, and video, using the
+**[Chat SDK](https://chat-sdk.dev)**.
 
 The Chat SDK exposes platform-agnostic events (`onNewMention`, `onReaction`,
 `onSubscribedMessage`) and methods (`thread.post`, `addReaction`, …). This
@@ -101,22 +102,21 @@ Thread ids are encoded as `velt:{organizationId}:{documentId}:{annotationId}`
 (each segment URL-encoded). `encodeThreadId` / `decodeThreadId` round-trip this,
 and `channelIdFromThreadId` yields `velt:{organizationId}:{documentId}`.
 
-## Feature support
+## What it supports
 
-| Capability | Status |
+| Capability | Notes |
 | --- | --- |
-| `postMessage` / `editMessage` / `deleteMessage` | ✅ |
-| `fetchMessages` / `fetchThread` / `fetchMessage` | ✅ |
-| `listThreads` / `fetchChannelMessages` / `fetchChannelInfo` | ✅ |
-| `postChannelMessage` (new thread on a document) | ✅ |
-| Attachments (read inbound + post by reference) | ✅ |
-| `renderFormatted` (mdast → Velt HTML) | ✅ |
-| `parseMessage` (with document context + mention normalization) | ✅ |
-| `handleWebhook` (v2 HMAC + v1 token) | ✅ |
-| `onNewMention` / `onSubscribedMessage` / `onReaction` (inbound) | ✅ |
-| `startTyping` | ▫️ no-op (Velt has no bot typing primitive) |
-| `addReaction` / `removeReaction` (bot **writing** reactions) | ⚠️ reading works everywhere; bot writes need a self-hosted backend (Velt itself supports reactions via the frontend SDK). See [Reactions](#reactions) |
-| `stream` / `scheduleMessage` / `postEphemeral` / `openDM` / modals | ❌ not implemented |
+| Post / edit / delete messages | `postMessage` / `editMessage` / `deleteMessage` |
+| Fetch a thread, its messages, or a single message | `fetchThread` / `fetchMessages` / `fetchMessage` |
+| List a document's threads, fetch its messages + info | `listThreads` / `fetchChannelMessages` / `fetchChannelInfo` |
+| Start a new thread on a document | `postChannelMessage` |
+| Attachments | read inbound files + post by reference |
+| Rich text both ways | Velt HTML ⇄ Chat SDK mdast (`renderFormatted` / `parseMessage`) |
+| Mentions + document context | detect & post mentions; anchored text, document name/URL |
+| Webhooks | Advanced (v2 HMAC) **and** Basic (v1 token) |
+| Inbound events | new mention, follow-up, reactions |
+| Reactions — reading | ✅ on all Velt plans |
+| Reactions — bot **writing** | needs a self-hosted backend (Velt supports reactions via the frontend SDK). See [Reactions](#reactions) |
 
 ## Message format
 
