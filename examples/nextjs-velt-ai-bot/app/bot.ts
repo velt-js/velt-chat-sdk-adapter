@@ -89,36 +89,78 @@ async function buildContextBlock(
  * about edge cases"), create one on the document via `postChannelMessage` and
  * return a confirmation. Returns null if the message isn't such a request.
  */
-async function maybeStartThread(
+// Threads where the bot asked "what should the new thread be about?" and is
+// waiting to use the next message as the topic. In-memory (per process).
+const pendingThreadTopic = new Set<string>();
+
+const WANTS_THREAD = /\b(?:start|create|open|make)\s+(?:a\s+)?(?:new\s+)?thread\b|\bnew thread\b/i;
+
+/**
+ * Extract a thread topic: prefer quoted text, then an about/on/for/:/- connector,
+ * then (only for a direct answer) the whole message minus a leading @mention.
+ */
+function extractTopic(text: string, allowWhole: boolean): string | null {
+  const quoted = text.match(/["“”']([^"“”']{2,})["“”']/);
+  if (quoted) return quoted[1]!.trim();
+  const connector =
+    text.match(/\b(?:about|on|regarding|for)\b\s+(.+)/i) ?? text.match(/\bthread\b\s*[:-]\s*(.+)/i);
+  if (connector) return connector[1]!.replace(/[?!.\s]+$/, "").trim() || null;
+  if (allowWhole) {
+    const whole = text
+      .replace(/^\s*@[\w.-]+(?:\s+[A-Z][\w.'-]*)?\s*/, "") // drop a leading @Mention
+      .replace(/[?!.\s]+$/, "")
+      .trim();
+    return whole.length >= 2 ? whole : null;
+  }
+  return null;
+}
+
+async function createThread(
   velt: VeltAdapter,
   thread: Thread,
   message: Message,
-): Promise<string | null> {
-  // Catch the *intent* to start a thread (even with no topic) so the LLM never
-  // handles it and can't falsely claim it created one.
-  const wantsThread = /\b(?:start|create|open|make)\s+(?:a\s+)?(?:new\s+)?thread\b|\bnew thread\b/i.test(
-    message.text,
-  );
-  if (!wantsThread) return null;
-
-  // Pull an explicit topic if one was given (via about/on/regarding/for/:/-).
-  const topicMatch = message.text.match(
-    /\bthread\b(?:\s+(?:about|on|regarding|for)\b|\s*[:-])\s*(.+)/i,
-  );
-  const topic = topicMatch?.[1]?.replace(/[?!.\s]+$/, "").trim();
-  if (!topic || topic.length < 2) {
-    // Intent without a topic: ask, rather than creating a "?"-titled thread.
-    return 'Sure — what should the new thread be about? Tell me a topic (e.g. "start a thread about edge cases") and I\'ll create it.';
-  }
-
+  topic: string,
+): Promise<string> {
   const channelId = velt.channelIdFromThreadId(thread.id);
   // Tag the requester in the new thread so they're notified and credited.
   const requester = message.author?.userId ? velt.mentionUser(message.author.userId) : "a teammate";
   await velt.postChannelMessage(
     channelId,
-    `New thread started by Velt Bot for ${requester}: ${topic}`,
+    `${topic}\n\n(New thread started by Velt Bot for ${requester}.)`,
   );
-  return `Started a new comment thread on this document about "${topic}" and tagged you in it.`;
+  return `Done! I created a new thread starting with "${topic}" and tagged you in it.`;
+}
+
+/**
+ * Deterministically handle "start a new thread" requests so the LLM never does
+ * (and can't falsely claim it created one). Two-step: if asked with no topic, the
+ * bot asks for one and then creates the thread from the next message in this thread.
+ */
+async function maybeStartThread(
+  velt: VeltAdapter,
+  thread: Thread,
+  message: Message,
+): Promise<string | null> {
+  const text = message.text ?? "";
+  const wantsThread = WANTS_THREAD.test(text);
+
+  // Step 2: we previously asked this thread for a topic — treat this as the answer.
+  if (pendingThreadTopic.has(thread.id) && !wantsThread) {
+    pendingThreadTopic.delete(thread.id);
+    const topic = extractTopic(text, true);
+    return topic ? createThread(velt, thread, message, topic) : null;
+  }
+
+  if (!wantsThread) return null;
+
+  // Step 1: explicit request. Use an inline topic if given, else ask for one.
+  const topic = extractTopic(text, false);
+  if (!topic) {
+    pendingThreadTopic.add(thread.id);
+    return 'Sure, what should the new thread be about? Tell me a topic (e.g. "start a thread about edge cases") and I\'ll create it.';
+  }
+  pendingThreadTopic.delete(thread.id);
+  return createThread(velt, thread, message, topic);
 }
 
 /** Image attachments (with a URL) across the messages, deduped and capped. */
