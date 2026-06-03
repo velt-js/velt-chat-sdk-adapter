@@ -4,14 +4,19 @@ import {
   Message,
   type Adapter,
   type AdapterPostableMessage,
+  type Attachment,
   type Author,
+  type ChannelInfo,
   type ChatInstance,
   type EmojiValue,
   type FetchOptions,
   type FetchResult,
   type FormattedContent,
+  type ListThreadsOptions,
+  type ListThreadsResult,
   type RawMessage,
   type ThreadInfo,
+  type ThreadSummary,
   type UserInfo,
   type WebhookOptions,
 } from "chat";
@@ -26,6 +31,7 @@ import { verifyVeltWebhook } from "./webhook/verify.js";
 import type {
   ResolvedVeltConfig,
   VeltAdapterConfig,
+  VeltAttachment,
   VeltRawMessage,
   VeltThreadId,
   VeltUser,
@@ -99,6 +105,18 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
     );
   }
 
+  /** Decode a `velt:{org}:{doc}` channel id back to its parts. */
+  decodeChannelId(channelId: string): { organizationId: string; documentId: string } {
+    const parts = channelId.split(":");
+    if (parts.length !== 3 || parts[0] !== THREAD_ID_PREFIX) {
+      throw new ValidationError(ADAPTER_NAME, `Invalid Velt channel id: ${channelId}`);
+    }
+    return {
+      organizationId: decodeURIComponent(parts[1]!),
+      documentId: decodeURIComponent(parts[2]!),
+    };
+  }
+
   // --- Messages -------------------------------------------------------------
 
   parseMessage(raw: VeltRawMessage): Message<VeltRawMessage> {
@@ -126,7 +144,7 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
         edited: Boolean(raw.isEdited),
         editedAt: raw.editedAt ? toDate(raw.editedAt) : undefined,
       },
-      attachments: [],
+      attachments: this.toAttachments(raw.attachments),
       isMention: isBotMentioned(raw, this.botUserId, this.userName),
       links: [],
     });
@@ -202,6 +220,85 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
         annotationId: ctx.annotationId,
         annotation: annotation ?? null,
       },
+    };
+  }
+
+  /** Fetch a single comment by id within a thread, or null if not found. */
+  async fetchMessage(threadId: string, messageId: string): Promise<Message<VeltRawMessage> | null> {
+    const ctx = this.decodeThreadId(threadId);
+    const raws = await this.client.getThreadComments(ctx);
+    const match = raws.find((r) => String(r.commentId) === messageId);
+    return match ? this.parseMessage(match) : null;
+  }
+
+  // --- Channels (documents) -------------------------------------------------
+
+  /** List the threads (comment annotations) on a document. */
+  async listThreads(
+    channelId: string,
+    options?: ListThreadsOptions,
+  ): Promise<ListThreadsResult<VeltRawMessage>> {
+    const ctx = this.decodeChannelId(channelId);
+    const { annotations, nextPageToken } = await this.client.listAnnotations({
+      ...ctx,
+      pageSize: options?.limit,
+      pageToken: options?.cursor,
+    });
+    return {
+      threads: annotations.map((a) => this.annotationToSummary(a, ctx)),
+      nextCursor: nextPageToken,
+    };
+  }
+
+  /** Fetch the root message of every thread on a document (channel-level messages). */
+  async fetchChannelMessages(
+    channelId: string,
+    options?: FetchOptions,
+  ): Promise<FetchResult<VeltRawMessage>> {
+    const ctx = this.decodeChannelId(channelId);
+    const { annotations } = await this.client.listAnnotations({
+      ...ctx,
+      pageSize: options?.limit,
+      pageToken: options?.cursor,
+    });
+    const messages = annotations
+      .map((a) => this.annotationRootMessage(a, ctx))
+      .filter((m): m is Message<VeltRawMessage> => m !== null);
+    return { messages };
+  }
+
+  /** Fetch a document's metadata as Chat SDK channel info. */
+  async fetchChannelInfo(channelId: string): Promise<ChannelInfo> {
+    const ctx = this.decodeChannelId(channelId);
+    const docs = await this.client.getDocuments({
+      organizationId: ctx.organizationId,
+      documentIds: [ctx.documentId],
+    });
+    const doc = (docs[0] ?? {}) as Record<string, unknown>;
+    return {
+      id: channelId,
+      name: (doc.documentName as string | undefined) ?? ctx.documentId,
+      metadata: { organizationId: ctx.organizationId, documentId: ctx.documentId, ...doc },
+    };
+  }
+
+  /** Post a new thread (comment annotation) to a document. */
+  async postChannelMessage(
+    channelId: string,
+    message: AdapterPostableMessage,
+  ): Promise<RawMessage<VeltRawMessage>> {
+    const ctx = this.decodeChannelId(channelId);
+    const input = this.toCommentInput(message);
+    const { annotationId, commentIds } = await this.client.createAnnotation({
+      ...ctx,
+      commentData: [input],
+    });
+    const fullCtx = { ...ctx, annotationId: annotationId ?? "" };
+    const commentId = commentIds[0] ?? input.commentId ?? 0;
+    return {
+      id: String(commentId),
+      threadId: this.encodeThreadId(fullCtx),
+      raw: this.client.toRawMessage({ ...input, commentId }, fullCtx),
     };
   }
 
@@ -392,11 +489,69 @@ export class VeltAdapter implements Adapter<VeltThreadId, VeltRawMessage> {
       message as never,
     );
     const text = this.converter.extractPlainText(html);
+    const attachments = this.fromAttachments(
+      (message as { attachments?: Attachment[] })?.attachments,
+    );
     return {
       commentText: text,
       commentHtml: html,
       from: { userId: this.botUserId, name: this.userName },
+      ...(attachments.length ? { attachments } : {}),
     };
+  }
+
+  /** Map a Velt annotation (with embedded comments) to a Chat SDK thread summary. */
+  private annotationToSummary(
+    annotation: Record<string, unknown>,
+    ctx: { organizationId: string; documentId: string },
+  ): ThreadSummary<VeltRawMessage> {
+    const annotationId = String(annotation.annotationId ?? "");
+    const comments = Array.isArray(annotation.comments) ? annotation.comments : [];
+    const fullCtx = { ...ctx, annotationId };
+    const root = this.client.toRawMessage(comments[0] ?? { commentId: 0 }, fullCtx);
+    const last = comments[comments.length - 1] as Record<string, unknown> | undefined;
+    return {
+      id: this.encodeThreadId(fullCtx),
+      rootMessage: this.parseMessage(root),
+      replyCount: Math.max(0, comments.length - 1),
+      lastReplyAt: last ? toDate(last.createdAt as number | string | undefined) : undefined,
+    };
+  }
+
+  /** The root (first) comment of an annotation as a parsed message, or null if empty. */
+  private annotationRootMessage(
+    annotation: Record<string, unknown>,
+    ctx: { organizationId: string; documentId: string },
+  ): Message<VeltRawMessage> | null {
+    const comments = Array.isArray(annotation.comments) ? annotation.comments : [];
+    if (!comments.length) return null;
+    const annotationId = String(annotation.annotationId ?? "");
+    return this.parseMessage(this.client.toRawMessage(comments[0], { ...ctx, annotationId }));
+  }
+
+  /** Velt comment attachments → Chat SDK attachments (by reference). */
+  private toAttachments(atts?: VeltAttachment[]): Attachment[] {
+    if (!atts?.length) return [];
+    return atts.map((a) => ({
+      type: veltAttachmentType(a.type),
+      url: a.url,
+      name: a.name,
+      mimeType: a.mimeType,
+      size: a.size,
+    }));
+  }
+
+  /** Chat SDK postable attachments → Velt attachment references. */
+  private fromAttachments(atts?: Attachment[]): VeltAttachment[] {
+    if (!atts?.length) return [];
+    return atts.map((a, i) => ({
+      attachmentId: i + 1,
+      name: a.name,
+      url: a.url,
+      mimeType: a.mimeType,
+      size: a.size,
+      type: a.type === "file" ? "document" : a.type,
+    }));
   }
 }
 
@@ -417,4 +572,18 @@ function normalizeEmojiName(raw: string): string {
 
 function emojiName(emoji: EmojiValue | string): string {
   return typeof emoji === "string" ? emoji : emoji.name;
+}
+
+/** Map a Velt attachment kind to the Chat SDK attachment type. */
+function veltAttachmentType(t?: string): Attachment["type"] {
+  switch ((t ?? "").toLowerCase()) {
+    case "image":
+      return "image";
+    case "video":
+      return "video";
+    case "audio":
+      return "audio";
+    default:
+      return "file";
+  }
 }

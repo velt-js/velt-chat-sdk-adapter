@@ -170,6 +170,133 @@ describe("fetchMessages", () => {
   });
 });
 
+function stubFetch(data: unknown): ReturnType<typeof vi.fn> {
+  const fetchMock = vi.fn().mockResolvedValue(
+    new Response(JSON.stringify({ result: { status: "success", data } }), { status: 200 }),
+  );
+  vi.stubGlobal("fetch", fetchMock);
+  return fetchMock;
+}
+
+describe("fetchMessage", () => {
+  const annotationData = [
+    {
+      annotationId: "ann-1",
+      comments: [
+        { commentId: 1, commentText: "first", from: { userId: "user-1" }, createdAt: 1 },
+        { commentId: 2, commentText: "second", from: { userId: "user-1" }, createdAt: 2 },
+      ],
+    },
+  ];
+
+  it("returns the matching comment by id", async () => {
+    stubFetch(annotationData);
+    const adapter = makeAdapter();
+    const threadId = adapter.encodeThreadId({ organizationId: "org-1", documentId: "doc-1", annotationId: "ann-1" });
+    const msg = await adapter.fetchMessage(threadId, "2");
+    expect(msg?.id).toBe("2");
+    expect(msg?.text).toContain("second");
+  });
+
+  it("returns null when no comment matches", async () => {
+    stubFetch(annotationData);
+    const adapter = makeAdapter();
+    const threadId = adapter.encodeThreadId({ organizationId: "org-1", documentId: "doc-1", annotationId: "ann-1" });
+    expect(await adapter.fetchMessage(threadId, "999")).toBeNull();
+  });
+});
+
+describe("listThreads / fetchChannelMessages", () => {
+  const annotations = [
+    {
+      annotationId: "ann-1",
+      comments: [
+        { commentId: 1, commentText: "root one", from: { userId: "user-1" }, createdAt: 1 },
+        { commentId: 2, commentText: "reply", from: { userId: "user-2" }, createdAt: 2 },
+      ],
+    },
+    {
+      annotationId: "ann-2",
+      comments: [{ commentId: 3, commentText: "root two", from: { userId: "user-3" }, createdAt: 3 }],
+    },
+  ];
+
+  it("listThreads maps annotations to thread summaries", async () => {
+    const fetchMock = stubFetch(annotations);
+    const adapter = makeAdapter();
+    const result = await adapter.listThreads("velt:org-1:doc-1");
+    expect(fetchMock.mock.calls[0]![0]).toContain("/v2/commentannotations/get");
+    expect(result.threads).toHaveLength(2);
+    expect(result.threads[0]!.id).toBe(
+      adapter.encodeThreadId({ organizationId: "org-1", documentId: "doc-1", annotationId: "ann-1" }),
+    );
+    expect(result.threads[0]!.rootMessage.text).toContain("root one");
+    expect(result.threads[0]!.replyCount).toBe(1);
+    expect(result.threads[1]!.replyCount).toBe(0);
+  });
+
+  it("fetchChannelMessages returns the root message of each thread", async () => {
+    stubFetch(annotations);
+    const adapter = makeAdapter();
+    const result = await adapter.fetchChannelMessages("velt:org-1:doc-1");
+    expect(result.messages).toHaveLength(2);
+    expect(result.messages[0]!.text).toContain("root one");
+    expect(result.messages[1]!.text).toContain("root two");
+  });
+
+  it("rejects a malformed channel id", async () => {
+    const adapter = makeAdapter();
+    await expect(adapter.listThreads("slack:org:doc")).rejects.toThrow(/Invalid Velt channel id/);
+  });
+});
+
+describe("fetchChannelInfo", () => {
+  it("maps document metadata to channel info", async () => {
+    const fetchMock = stubFetch([{ id: "doc-1", documentName: "My Document", accessType: "public" }]);
+    const adapter = makeAdapter();
+    const info = await adapter.fetchChannelInfo("velt:org-1:doc-1");
+    expect(fetchMock.mock.calls[0]![0]).toContain("/v2/organizations/documents/get");
+    expect(info.id).toBe("velt:org-1:doc-1");
+    expect(info.name).toBe("My Document");
+    expect(info.metadata.documentId).toBe("doc-1");
+  });
+});
+
+describe("postChannelMessage", () => {
+  it("creates a new annotation with an initial comment", async () => {
+    const fetchMock = stubFetch({ annotationId: "new-ann", commentIds: [555] });
+    const adapter = makeAdapter();
+    const result = await adapter.postChannelMessage("velt:org-1:doc-1", "New thread root");
+
+    const [url, init] = fetchMock.mock.calls[0]!;
+    expect(url).toContain("/v2/commentannotations/add");
+    const body = JSON.parse((init as RequestInit).body as string);
+    expect(body.data.commentAnnotations[0].commentData[0].from.userId).toBe("velt-bot");
+    expect(body.data.commentAnnotations[0].commentData[0].commentText).toContain("New thread root");
+    expect(result.id).toBe("555");
+    expect(result.threadId).toBe(
+      adapter.encodeThreadId({ organizationId: "org-1", documentId: "doc-1", annotationId: "new-ann" }),
+    );
+  });
+});
+
+describe("attachments", () => {
+  it("parses inbound comment attachments into Chat SDK attachments", () => {
+    const adapter = makeAdapter();
+    const msg = adapter.parseMessage(
+      rawComment({
+        attachments: [
+          { name: "diagram.png", url: "https://files/diagram.png", type: "image", mimeType: "image/png", size: 2048 },
+          { name: "notes.pdf", url: "https://files/notes.pdf", type: "document", mimeType: "application/pdf" },
+        ],
+      }),
+    );
+    expect(msg.attachments).toHaveLength(2);
+    expect(msg.attachments[0]).toMatchObject({ type: "image", url: "https://files/diagram.png", name: "diagram.png" });
+    expect(msg.attachments[1]!.type).toBe("file");
+  });
+});
+
 describe("reactions", () => {
   it("throws on the managed backend", async () => {
     const adapter = makeAdapter();

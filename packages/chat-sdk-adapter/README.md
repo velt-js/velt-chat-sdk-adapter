@@ -106,13 +106,16 @@ and `channelIdFromThreadId` yields `velt:{organizationId}:{documentId}`.
 | Capability | Status |
 | --- | --- |
 | `postMessage` / `editMessage` / `deleteMessage` | ✅ |
-| `fetchMessages` / `fetchThread` | ✅ |
+| `fetchMessages` / `fetchThread` / `fetchMessage` | ✅ |
+| `listThreads` / `fetchChannelMessages` / `fetchChannelInfo` | ✅ |
+| `postChannelMessage` (new thread on a document) | ✅ |
+| Attachments (read inbound + post by reference) | ✅ |
 | `renderFormatted` (mdast → Velt HTML) | ✅ |
 | `parseMessage` (with document context + mention normalization) | ✅ |
 | `handleWebhook` (v2 HMAC + v1 token) | ✅ |
 | `onNewMention` / `onSubscribedMessage` / `onReaction` (inbound) | ✅ |
 | `startTyping` | ▫️ no-op (Velt has no bot typing primitive) |
-| `addReaction` / `removeReaction` (writing) | ⚠️ managed throws; self-hosted only (see [Reactions](#reactions)) |
+| `addReaction` / `removeReaction` (bot **writing** reactions) | ⚠️ reading works everywhere; bot writes need a self-hosted backend (Velt itself supports reactions via the frontend SDK). See [Reactions](#reactions) |
 | `stream` / `scheduleMessage` / `postEphemeral` / `openDM` / modals | ❌ not implemented |
 
 ## Message format

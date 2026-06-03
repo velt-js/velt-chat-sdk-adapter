@@ -34,6 +34,22 @@ export interface VeltTaggedContact {
   contact?: VeltUser;
 }
 
+/** An attachment on a Velt comment (file/image/video). */
+export interface VeltAttachment {
+  attachmentId?: number;
+  name?: string;
+  /** Download URL for the file. */
+  url?: string;
+  /** Thumbnail URL, when available. */
+  thumbnail?: string;
+  /** MIME type, e.g. "image/png". */
+  mimeType?: string;
+  /** File size in bytes. */
+  size?: number;
+  /** Velt attachment kind: "image", "video", or "document". */
+  type?: string;
+}
+
 /** A reaction annotation attached to a Velt comment. */
 export interface VeltReactionAnnotation {
   annotationId?: string;
@@ -64,6 +80,8 @@ export interface VeltRawMessage {
   editedAt?: number | string;
   isEdited?: boolean;
   reactionAnnotations?: VeltReactionAnnotation[];
+  /** Files/images attached to this comment. */
+  attachments?: VeltAttachment[];
 
   // --- denormalized thread context ---
   organizationId: string;

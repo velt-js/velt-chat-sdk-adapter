@@ -2,6 +2,7 @@ import { ValidationError } from "@chat-adapter/shared";
 import { ADAPTER_NAME, mapVeltError } from "./errors.js";
 import type {
   ResolvedVeltConfig,
+  VeltAttachment,
   VeltRawMessage,
   VeltTaggedContact,
   VeltUser,
@@ -18,6 +19,7 @@ export interface VeltCommentInput {
   commentHtml?: string;
   from: { userId: string; name?: string; email?: string };
   taggedUserContacts?: VeltTaggedContact[];
+  attachments?: VeltAttachment[];
   createdAt?: number;
   lastUpdated?: number;
 }
@@ -250,6 +252,80 @@ export class VeltRestClient {
     return comments.map((c) => this.toRawMessage(c, args));
   }
 
+  /**
+   * List the comment annotations (threads) on a document.
+   *
+   * `/v2/commentannotations/get` with a `documentId` and no `annotationIds`
+   * returns every annotation on the document (the annotation objects embed their
+   * `comments[]`). Supports pagination via `pageSize` / `pageToken`.
+   */
+  async listAnnotations(args: {
+    organizationId: string;
+    documentId: string;
+    pageSize?: number;
+    pageToken?: string;
+  }): Promise<{ annotations: Record<string, unknown>[]; nextPageToken?: string }> {
+    const data = await this.request<unknown>("/v2/commentannotations/get", args, {
+      action: "list threads",
+      resourceType: "document",
+      resourceId: args.documentId,
+    });
+    if (Array.isArray(data)) return { annotations: data as Record<string, unknown>[] };
+    const obj = (data ?? {}) as Record<string, unknown>;
+    const annotations = Array.isArray(obj.data)
+      ? (obj.data as Record<string, unknown>[])
+      : Array.isArray(obj.annotations)
+        ? (obj.annotations as Record<string, unknown>[])
+        : [];
+    return { annotations, nextPageToken: obj.nextPageToken as string | undefined };
+  }
+
+  /** Fetch document metadata by id (`/v2/organizations/documents/get`). */
+  async getDocuments(args: {
+    organizationId: string;
+    documentIds: string[];
+  }): Promise<Record<string, unknown>[]> {
+    const data = await this.request<unknown>("/v2/organizations/documents/get", args, {
+      action: "fetch channel info",
+      resourceType: "document",
+      resourceId: args.documentIds[0],
+    });
+    if (Array.isArray(data)) return data as Record<string, unknown>[];
+    const obj = (data ?? {}) as Record<string, unknown>;
+    return Array.isArray(obj.data) ? (obj.data as Record<string, unknown>[]) : [];
+  }
+
+  /**
+   * Create a new comment annotation (thread) on a document, with an initial
+   * comment. Used for `postChannelMessage` — a document-level message that is
+   * not a reply to an existing thread.
+   */
+  async createAnnotation(args: {
+    organizationId: string;
+    documentId: string;
+    commentData: VeltCommentInput[];
+  }): Promise<{ annotationId?: string; commentIds: number[] }> {
+    const data = await this.request<unknown>(
+      "/v2/commentannotations/add",
+      {
+        organizationId: args.organizationId,
+        documentId: args.documentId,
+        commentAnnotations: [{ commentData: args.commentData }],
+      },
+      { action: "post channel message", resourceType: "document", resourceId: args.documentId },
+    );
+    // Response may be the created annotation, an array of them, or `{ data: [...] }`.
+    const raw = (data ?? {}) as Record<string, unknown>;
+    const first = Array.isArray(data)
+      ? ((data as Record<string, unknown>[])[0] ?? {})
+      : Array.isArray(raw.data)
+        ? ((raw.data as Record<string, unknown>[])[0] ?? {})
+        : raw;
+    const f = first as Record<string, unknown>;
+    const commentIds = Array.isArray(f.commentIds) ? (f.commentIds as number[]) : [];
+    return { annotationId: f.annotationId as string | undefined, commentIds };
+  }
+
   /** Normalize a raw Velt comment into a {@link VeltRawMessage}. */
   toRawMessage(
     comment: unknown,
@@ -268,6 +344,7 @@ export class VeltRestClient {
       editedAt: c.editedAt as number | string | undefined,
       isEdited: c.isEdited as boolean | undefined,
       reactionAnnotations: c.reactionAnnotations as VeltRawMessage["reactionAnnotations"],
+      attachments: c.attachments as VeltAttachment[] | undefined,
       organizationId: ctx.organizationId,
       documentId: ctx.documentId,
       annotationId: ctx.annotationId,

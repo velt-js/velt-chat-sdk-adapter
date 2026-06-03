@@ -6,18 +6,27 @@ project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0]
+
+### Added
+- Channel/document-level methods, all backed by Velt's **managed** REST API:
+  - `listThreads(channelId)` and `fetchChannelMessages(channelId)` — via
+    `/v2/commentannotations/get` (lists a document's annotations).
+  - `fetchChannelInfo(channelId)` — via `/v2/organizations/documents/get`.
+  - `postChannelMessage(channelId, message)` — creates a new annotation via
+    `/v2/commentannotations/add`.
+  - `fetchMessage(threadId, messageId)` — a single comment by id.
+- Comment **attachments**: inbound attachments are parsed into Chat SDK
+  `Attachment`s (previously dropped), and attachment references are forwarded when
+  posting.
+
 ### Changed
 - Renamed npm scope `@velt-js/chat-sdk-adapter` → `@veltdev/chat-sdk-adapter`.
   The old package is deprecated and redirects here.
 
 ### Tests
-- Added 24 tests (46 → 70): `config.test.ts` covers `resolveConfig` env
-  fallbacks, explicit-over-env precedence, empty-string-as-missing, managed vs
-  self-hosted backend, `webhookVersion` default, and `ValidationError` on missing
-  credentials, plus `createVeltAdapter` eager validation; `errors.test.ts` covers
-  `mapVeltError` status→class mapping (401/403/404/429/500), nested
-  `response.status`, `AdapterError` passthrough, `NetworkError` for statusless
-  errors, and `retryAfter` preservation, plus `notSupported`.
+- Added config + error-mapping coverage and tests for the new channel /
+  message-history methods and attachment parsing (78 tests total).
 
 ## [0.1.0]
 
